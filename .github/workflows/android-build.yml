@@ -1,4 +1,4 @@
-name: Build & Sign iVPN
+name: Build Unsigned FUTURIX
 
 on:
   push:
@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4       # آپدیت شد به نسخه 4
+    - uses: actions/checkout@v4       # نسخه جدید
     
     - name: set up JDK 17
-      uses: actions/setup-java@v4     # آپدیت شد به نسخه 4
+      uses: actions/setup-java@v4     # نسخه جدید
       with:
         java-version: '17'
         distribution: 'temurin'
@@ -22,26 +22,13 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    # مرحله ۱: ساخت فایل
+    # مرحله ساخت فایل خام (بدون امضا)
     - name: Build with Gradle
       run: ./gradlew assembleRelease
 
-    # مرحله ۲: امضا کردن (ساین)
-    - name: Sign APK
-      uses: r0adkll/sign-android-release@v1
-      id: sign_app
-      with:
-        releaseDirectory: app/build/outputs/apk/release
-        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-        alias: ${{ secrets.ALIAS }}
-        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-        keyPassword: ${{ secrets.KEY_PASSWORD }}
-      env:
-        BUILD_TOOLS_VERSION: "34.0.0"
-
-    # مرحله ۳: آپلود فایل (اصلاح ارور v3 به v4)
-    - name: Upload Signed APK
+    # آپلود فایل خام برای دانلود
+    - name: Upload Unsigned APK
       uses: actions/upload-artifact@v4
       with:
-        name: iVPN-Signed
-        path: ${{ steps.sign_app.outputs.signedReleaseFile }}
+        name: FUTURIX-Unsigned
+        path: app/build/outputs/apk/release/app-release-unsigned.apk
