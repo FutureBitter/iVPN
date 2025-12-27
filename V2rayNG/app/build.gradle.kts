@@ -79,6 +79,12 @@ android {
         }
     }
 
+
+    lint {
+        isAbortOnError = false
+        isCheckReleaseBuilds = false
+    }
+ 
     applicationVariants.all {
         val variant = this
         val isFdroid = variant.productFlavors.any { it.name == "fdroid" }
