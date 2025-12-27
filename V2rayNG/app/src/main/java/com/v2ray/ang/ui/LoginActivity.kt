@@ -7,6 +7,7 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+
 import com.v2ray.ang.R
 import com.v2ray.ang.util.AngConfigManager
 import com.v2ray.ang.dto.EConfigType
@@ -21,7 +22,6 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
 
-        // بررسی اینکه آیا قبلا لاگین کرده یا نه (ساده)
         val prefs = getSharedPreferences("app_auth", MODE_PRIVATE)
         if (prefs.getBoolean("is_logged_in", false)) {
             startActivity(Intent(this, MainActivity::class.java))
@@ -47,7 +47,6 @@ class LoginActivity : AppCompatActivity() {
 
             thread {
                 try {
-                    // آدرس پنل PHP خودت رو اینجا بزار
                     val url = URL("https://fachur.ir/panel.php?api=login")
                     val conn = url.openConnection() as HttpURLConnection
                     conn.requestMethod = "POST"
@@ -69,12 +68,8 @@ class LoginActivity : AppCompatActivity() {
                             val data = jsonRes.getJSONObject("data")
                             val subUrl = data.getString("subscription_url")
 
-                            // ذخیره وضعیت لاگین
                             prefs.edit().putBoolean("is_logged_in", true).apply()
 
-                            // افزودن لینک سابسکریپشن به v2rayNG
-                            // نکته: این تابع در نسخه‌های مختلف v2rayNG ممکن است کمی متفاوت باشد
-                            // اما منطق کلی ایمپورت کردن کانفیگ است
                             runOnUiThread {
                                 importConfig(subUrl)
                             }
@@ -101,15 +96,13 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun importConfig(url: String) {
-        // متد ساده برای افزودن لینک به دیتابیس v2rayNG
-        // چون دسترسی مستقیم به کلاس‌های داخلی سخت است، ما لینک را به عنوان سابسکریپشن اضافه میکنیم
         try {
            val config = AngConfigManager.importBatchConfig(url, "", false)
            Toast.makeText(this, "خوش آمدید! کانفیگ دریافت شد.", Toast.LENGTH_LONG).show()
            startActivity(Intent(this, MainActivity::class.java))
            finish()
         } catch (e: Exception) {
-            Toast.makeText(this, "خطا در ذخیره کانفیگ", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "خطا در ذخیره کانفیگ: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 }
