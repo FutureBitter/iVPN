@@ -10,10 +10,10 @@ android {
 
     defaultConfig {
         applicationId = "com.ivpn.app"
-        minSdk = 21
-        targetSdk = 35
-        versionCode = 684
-        versionName = "1.10.32"
+        minSdk = 24
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
         multiDexEnabled = true
 
         val abiFilterList = (properties["ABI_FILTERS"] as? String)?.split(';')
