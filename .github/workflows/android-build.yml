@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.v2ray.ang">
+    package="com.ivpn.app">
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -13,12 +13,9 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- دسترسی‌های جدید اندروید -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
-
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -40,8 +37,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!-- بخش ۲: صفحه اصلی (دیگر لانچر نیست) -->
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
@@ -51,8 +46,6 @@
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
-
-        <!-- سایر صفحات ضروری برنامه -->
         <activity android:name=".ui.ServerActivity" android:exported="false" android:windowSoftInputMode="stateUnchanged" />
         <activity android:name=".ui.ServerCustomConfigActivity" android:exported="false" android:windowSoftInputMode="stateUnchanged" />
         <activity android:name=".ui.SettingsActivity" android:exported="false" />
@@ -62,8 +55,6 @@
         <activity android:name=".ui.RoutingSettingsActivity" android:exported="false" android:windowSoftInputMode="stateUnchanged" />
         <activity android:name=".ui.SubSettingActivity" android:exported="false" />
         <activity android:name=".ui.UserAssetActivity" android:exported="false" />
-
-        <!-- سرویس‌های اصلی -->
         <service
             android:name=".service.V2RayVpnService"
             android:exported="false"
@@ -85,7 +76,6 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
-
         <receiver android:name=".receiver.WidgetProvider" android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -93,7 +83,6 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/app_widget_provider" />
         </receiver>
-
         <receiver android:name=".receiver.BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -101,6 +90,5 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
-
     </application>
 </manifest>
