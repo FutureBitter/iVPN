@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.i.vpn"
+    namespace = "com.ivpn.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.i.vpn"
+        applicationId = "com.ivpn.app"
         minSdk = 21
         targetSdk = 35
         versionCode = 684
