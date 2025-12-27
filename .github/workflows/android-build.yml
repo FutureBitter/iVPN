@@ -10,25 +10,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4       # نسخه جدید
+    - uses: actions/checkout@v4
     
     - name: set up JDK 17
-      uses: actions/setup-java@v4     # نسخه جدید
+      uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
         cache: gradle
 
+    # مرحله ۱: دادن دسترسی اجرا (با اصلاح مسیر)
     - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+      run: |
+        cd V2rayNG
+        chmod +x gradlew
 
-    # مرحله ساخت فایل خام (بدون امضا)
+    # مرحله ۲: ساخت فایل (با اصلاح مسیر)
     - name: Build with Gradle
-      run: ./gradlew assembleRelease
+      run: |
+        cd V2rayNG
+        ./gradlew assembleRelease
 
-    # آپلود فایل خام برای دانلود
+    # مرحله ۳: آپلود فایل (با اصلاح مسیر فایل خروجی)
     - name: Upload Unsigned APK
       uses: actions/upload-artifact@v4
       with:
         name: FUTURIX-Unsigned
-        path: app/build/outputs/apk/release/app-release-unsigned.apk
+        # مسیر دقیق فایل خروجی با توجه به پوشه شما
+        path: V2rayNG/app/build/outputs/apk/release/app-release-unsigned.apk
