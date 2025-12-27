@@ -1,4 +1,4 @@
-name: Build Unsigned FUTURIX
+name: Build iVPN
 
 on:
   push:
@@ -19,22 +19,21 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    # مرحله ۱: دادن دسترسی اجرا (با اصلاح مسیر)
+    # تنظیم دسترسی (با توجه به پوشه V2rayNG که گفتی)
     - name: Grant execute permission for gradlew
       run: |
         cd V2rayNG
         chmod +x gradlew
 
-    # مرحله ۲: ساخت فایل (با اصلاح مسیر)
+    # ساخت فایل
     - name: Build with Gradle
       run: |
         cd V2rayNG
         ./gradlew assembleRelease
 
-    # مرحله ۳: آپلود فایل (با اصلاح مسیر فایل خروجی)
+    # آپلود فایل با نام iVPN
     - name: Upload Unsigned APK
       uses: actions/upload-artifact@v4
       with:
-        name: FUTURIX-Unsigned
-        # مسیر دقیق فایل خروجی با توجه به پوشه شما
+        name: iVPN-Unsigned
         path: V2rayNG/app/build/outputs/apk/release/app-release-unsigned.apk
