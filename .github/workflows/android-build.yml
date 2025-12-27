@@ -30,8 +30,6 @@
         android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network_security_config"
         tools:replace="android:label">
-
-        <!-- بخش ۱: صفحه لاگین (شروع برنامه) -->
         <activity
             android:name=".ui.LoginActivity"
             android:exported="true"
