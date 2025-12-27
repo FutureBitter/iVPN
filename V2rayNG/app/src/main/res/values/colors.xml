@@ -3,17 +3,23 @@
     <color name="colorPrimary">#4F46E5</color>
     <color name="colorPrimaryDark">#1E1B4B</color>
     <color name="colorAccent">#818CF8</color>
-
     <color name="colorBackground">#0F172A</color>
     <color name="colorSurface">#1E293B</color>
-
+    
     <color name="primary_text">#F8FAFC</color>
     <color name="secondary_text">#94A3B8</color>
     <color name="tv_text_default">#F8FAFC</color>
 
-    <color name="colorConfigType">#64748B</color>  <color name="colorPing">#10B981</color>        <color name="colorTrafficStart">#10B981</color>
+    <color name="colorConfigType">#64748B</color>
+    <color name="colorPing">#10B981</color>
+    <color name="colorPingRed">#EF4444</color>  
+    <color name="colorTrafficStart">#10B981</color>
     <color name="colorTrafficEnd">#EF4444</color>
     <color name="drawer_icon">#94A3B8</color>
+    
+    <color name="colorConnected">#4F46E5</color>
+    <color name="colorDisconnected">#EF4444</color>
+    <color name="colorConnecting">#F59E0B</color>
 
     <color name="purple_200">#818CF8</color>
     <color name="purple_500">#4F46E5</color>
@@ -24,8 +30,11 @@
     <color name="white">#FFFFFF</color>
     <color name="gray">#808080</color>
     <color name="light_gray">#D3D3D3</color>
+    <color name="gold">#FFD700</color>
     
-    <color name="colorConnected">#4F46E5</color>
-    <color name="colorDisconnected">#EF4444</color>
+    <color name="def">#808080</color>
+    <color name="hap">#10B981</color>
+    <color name="sec">#3B82F6</color>
+    <color name="fil">#F59E0B</color>
+    <color name="dn">#EF4444</color>
 </resources>
-
