@@ -1,11 +1,12 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    id("kotlin-kapt")
     id("com.jaredsburrows.license")
 }
 
 android {
-    namespace = "com.v2ray.ang" 
+    namespace = "com.v2ray.ang"
     compileSdk = 35
 
     defaultConfig {
@@ -80,14 +81,14 @@ android {
     }
 
     lint {
-        isAbortOnError = false
-        isCheckReleaseBuilds = false
+        abortOnError = false
+        checkReleaseBuilds = false
     }
 
     buildFeatures {
         viewBinding = true
         buildConfig = true
-        dataBinding = true 
+        dataBinding = true
     }
 
     packaging {
@@ -142,3 +143,5 @@ dependencies {
     testImplementation(libs.mockito.kotlin)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 }
+
+
