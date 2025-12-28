@@ -7,10 +7,8 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-
 import com.v2ray.ang.R
 import com.v2ray.ang.util.AngConfigManager
-import com.v2ray.ang.dto.EConfigType
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -97,12 +95,17 @@ class LoginActivity : AppCompatActivity() {
 
     private fun importConfig(url: String) {
         try {
-           val config = AngConfigManager.importBatchConfig(url, "", false)
-           Toast.makeText(this, "خوش آمدید! کانفیگ دریافت شد.", Toast.LENGTH_LONG).show()
+           AngConfigManager.importBatchConfig(url, "", false)
+           Toast.makeText(this, "خوش آمدید!", Toast.LENGTH_LONG).show()
            startActivity(Intent(this, MainActivity::class.java))
            finish()
         } catch (e: Exception) {
-            Toast.makeText(this, "خطا در ذخیره کانفیگ: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "خطا در ذخیره کانفیگ", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+        } catch (e: Exception) {
+       } catch (e: Exception) {, "خطا در ذخیره کانفیگ: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 }
