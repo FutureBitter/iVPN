@@ -8,7 +8,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.v2ray.ang.R
-import com.v2ray.ang.util.AngConfigManager
+import com.v2ray.ang.handler.AngConfigManager
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
