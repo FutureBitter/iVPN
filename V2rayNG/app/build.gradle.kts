@@ -25,17 +25,11 @@ android {
                 if (abiFilterList != null && abiFilterList.isNotEmpty()) {
                     include(*abiFilterList.toTypedArray())
                 } else {
-                    include(
-                        "arm64-v8a",
-                        "armeabi-v7a",
-                        "x86_64",
-                        "x86"
-                    )
+                    include("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
                 }
                 isUniversalApk = abiFilterList.isNullOrEmpty()
             }
         }
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -96,11 +90,10 @@ android {
             useLegacyPackaging = true
         }
     }
-
 }
 
 dependencies {
-    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))
+    implementation(fileTree(mapOf("dir" to project.file("libs"), "include" to listOf("*.aar", "*.jar"))))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -143,5 +136,4 @@ dependencies {
     testImplementation(libs.mockito.kotlin)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 }
-
 
