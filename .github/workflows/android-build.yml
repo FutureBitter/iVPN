@@ -19,6 +19,13 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
+    - name: Download Core Library
+      run: |
+        mkdir -p V2rayNG/app/libs
+        echo "Downloading libv2ray.aar..."
+        wget -O V2rayNG/app/libs/libv2ray.aar https://github.com/2dust/AndroidLib/releases/download/v0.5.4/libv2ray.aar
+        ls -R V2rayNG/app/libs
+
     - name: Grant execute permission for gradlew
       run: |
         cd V2rayNG
@@ -33,4 +40,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: iVPN-Unsigned
-        path: V2rayNG/app/build/outputs/apk/release/app-release-unsigned.apk
+        path: V2rayNG/app/build/outputs/apk/release/*.apk
+
