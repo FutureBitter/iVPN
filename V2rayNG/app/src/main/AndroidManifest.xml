@@ -29,7 +29,6 @@
         android:networkSecurityConfig="@xml/network_security_config"
         tools:replace="android:label">
 
-        <!-- صفحه لاگین به عنوان لانچر (شروع برنامه) -->
         <activity
             android:name=".ui.LoginActivity"
             android:exported="true"
