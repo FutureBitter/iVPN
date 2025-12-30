@@ -2,10 +2,6 @@ name: Build APK
 
 on:
   workflow_dispatch:
-    inputs:
-      release_tag:
-        required: false
-        type: string
   push:
     branches:
       - master
@@ -39,63 +35,32 @@ jobs:
         \
             ndkVersion = "28.2.13676358"' ${{ github.workspace }}/V2rayNG/app/build.gradle.kts
 
-    - name: Restore cached libtun2socks
-      id: cache-libtun2socks-restore
-      uses: actions/cache/restore@v4
-      with:
-        path: ${{ github.workspace }}/libs
-        key: libtun2socks-${{ runner.os }}-${{ env.NDK_HOME }}-${{ hashFiles('.git/modules/hev-socks5-tunnel/HEAD') }}-${{ hashFiles('.git/modules/badvpn/HEAD') }}-${{ hashFiles('.git/modules/libancillary/HEAD') }}-${{ hashFiles('compile-tun2socks.sh') }}--${{ hashFiles('compile-hevtun.sh') }}
-
+    # مرحله ۱: ساخت اجباری Tun2Socks (بدون کش)
     - name: Build libtun2socks
-      if: steps.cache-libtun2socks-restore.outputs.cache-hit != 'true'
       run: |
-        bash compile-tun2socks.sh && bash compile-hevtun.sh
+        chmod +x compile-tun2socks.sh
+        chmod +x compile-hevtun.sh
+        bash compile-tun2socks.sh
+        bash compile-hevtun.sh
     
-    - name: Save libtun2socks
-      if: steps.cache-libtun2socks-restore.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        path: ${{ github.workspace }}/libs
-        key: libtun2socks-${{ runner.os }}-${{ env.NDK_HOME }}-${{ hashFiles('.git/modules/hev-socks5-tunnel/HEAD') }}-${{ hashFiles('.git/modules/badvpn/HEAD') }}-${{ hashFiles('.git/modules/libancillary/HEAD') }}-${{ hashFiles('compile-tun2socks.sh') }}--${{ hashFiles('compile-hevtun.sh') }}
-
-    - name: Copy libtun2socks
+    # مرحله ۲: ساخت پوشه libs در پروژه اندروید
+    - name: Prepare Libs Directory
       run: |
-        cp -r ${{ github.workspace }}/libs ${{ github.workspace }}/V2rayNG/app
+        mkdir -p ${{ github.workspace }}/V2rayNG/app/libs
 
+    # مرحله ۳: کپی کردن فایل‌های ساخته شده (tun2socks) به داخل پروژه
+    - name: Copy Built Libs
+      run: |
+        echo "Copying built libraries..."
+        # کپی محتویات پوشه libs ریشه به داخل app/libs
+        cp -r ${{ github.workspace }}/libs/* ${{ github.workspace }}/V2rayNG/app/libs/
+        ls -R ${{ github.workspace }}/V2rayNG/app/libs/
+
+    # مرحله ۴: دانلود libv2ray سالم
     - name: Download libv2ray
       run: |
-        mkdir -p V2rayNG/app/libs
-        wget -O V2rayNG/app/libs/libv2ray.aar https://github.com/2dust/AndroidLibXrayLite/releases/download/v25.12.8/libv2ray.aar
-
-    - name: Restore cached libhysteria2
-      id: cache-libhysteria2-restore
-      uses: actions/cache/restore@v4
-      with:
-        path: ${{ github.workspace }}/hysteria/libs
-        key: libhysteria2-${{ runner.os }}-${{ env.NDK_HOME }}-${{ hashFiles('.git/modules/hysteria/HEAD') }}-${{ hashFiles('libhysteria2.sh') }}
-
-    - name: Setup Golang
-      if: steps.cache-libhysteria2-restore.outputs.cache-hit != 'true'
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: 'AndroidLibXrayLite/go.mod'
-        cache: false
-
-    - name: Build libhysteria2
-      if: steps.cache-libhysteria2-restore.outputs.cache-hit != 'true'
-      run: |
-        bash libhysteria2.sh
-
-    - name: Save libhysteria2
-      if: steps.cache-libhysteria2-restore.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        path: ${{ github.workspace }}/hysteria/libs
-        key: libhysteria2-${{ runner.os }}-${{ env.NDK_HOME }}-${{ hashFiles('.git/modules/hysteria/HEAD') }}-${{ hashFiles('libhysteria2.sh') }}
-
-    - name: Copy libhysteria2
-      run: |
-        cp -r ${{ github.workspace }}/hysteria/libs ${{ github.workspace }}/V2rayNG/app
+        echo "Downloading libv2ray.aar..."
+        wget -O ${{ github.workspace }}/V2rayNG/app/libs/libv2ray.aar https://github.com/2dust/AndroidLibXrayLite/releases/download/v25.12.8/libv2ray.aar
 
     - name: Setup Java
       uses: actions/setup-java@v4
@@ -130,12 +95,3 @@ jobs:
       with:
         name: x86-apk
         path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*x86*.apk
-
-    - name: Upload to release
-      uses: svenstaro/upload-release-action@v2
-      if: github.event.inputs.release_tag != ''
-      with:
-        file: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*.apk
-        tag: ${{ github.event.inputs.release_tag }}
-        file_glob: true
-        prerelease: true
