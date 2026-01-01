@@ -31,12 +31,10 @@ jobs:
           --channel=0 \
           --install "ndk;28.2.13676358"
         echo "NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> $GITHUB_ENV
-        # تنظیم ورژن NDK در فایل گریدل
         sed -i '10i\
         \
             ndkVersion = "28.2.13676358"' ${{ github.workspace }}/V2rayNG/app/build.gradle.kts
 
-    # --- مرحله ۱: ساخت Tun2Socks ---
     - name: Build libtun2socks
       run: |
         chmod +x compile-tun2socks.sh
@@ -48,12 +46,10 @@ jobs:
       run: |
         cp -r ${{ github.workspace }}/libs ${{ github.workspace }}/V2rayNG/app
 
-    # --- مرحله ۲: دانلود هسته V2Ray (نسخه هماهنگ با کد) ---
     - name: Fetch AndroidLibXrayLite tag
       run: |
         pushd AndroidLibXrayLite
         CURRENT_TAG=$(git describe --tags --abbrev=0)
-        echo "Current tag in this repo: $CURRENT_TAG"
         echo "CURRENT_TAG=$CURRENT_TAG" >> $GITHUB_ENV
         popd
 
@@ -65,7 +61,6 @@ jobs:
         fileName: 'libv2ray.aar'
         out-file-path: V2rayNG/app/libs/
 
-    # --- مرحله ۳: ساخت Hysteria ---
     - name: Setup Golang
       uses: actions/setup-go@v5
       with:
@@ -87,7 +82,6 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    # --- مرحله ۴: بیلد نهایی (بدون نیاز به رمز) ---
     - name: Build APK (Unsigned)
       run: |
         cd ${{ github.workspace }}/V2rayNG
@@ -95,10 +89,23 @@ jobs:
         chmod 755 gradlew
         ./gradlew assembleRelease
     
-    # --- آپلود فایل‌های خروجی ---
-    - name: Upload APKs
+    - name: Upload arm64-v8a APK
       uses: actions/upload-artifact@v4
-      if: success()
+      if: ${{ success() }}
       with:
-        name: iVPN-Final-Release
-        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*.apk
+        name: arm64-v8a
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*arm64-v8a*.apk
+
+    - name: Upload armeabi-v7a APK
+      uses: actions/upload-artifact@v4
+      if: ${{ success() }}
+      with:
+        name: armeabi-v7a
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*armeabi-v7a*.apk
+
+    - name: Upload x86 APK
+      uses: actions/upload-artifact@v4
+      if: ${{ success() }}
+      with:
+        name: x86-apk
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*x86*.apk
