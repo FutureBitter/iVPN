@@ -35,7 +35,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false // غیرفعال کردن کوچک‌سازی برای جلوگیری از خطا
+            isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -58,7 +58,6 @@ android {
 
     sourceSets {
         getByName("main") {
-            // این خط به برنامه می‌گوید فایل‌های .so کپی شده در libs را بخواند
             jniLibs.srcDirs("libs")
         }
     }
@@ -94,9 +93,7 @@ android {
 }
 
 dependencies {
-    // بارگذاری فایل‌های aar و jar از پوشه libs
-    implementation(fileTree(mapOf("dir" to project.file("libs"), "include" to listOf("*.aar", "*.jar"))))
-
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity)
