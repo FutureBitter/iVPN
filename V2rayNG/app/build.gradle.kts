@@ -16,26 +16,22 @@ android {
         versionCode = 1
         versionName = "1.0"
         multiDexEnabled = true
-
-        val abiFilterList = (properties["ABI_FILTERS"] as? String)?.split(';')
-        splits {
-            abi {
-                isEnable = true
-                reset()
-                if (abiFilterList != null && abiFilterList.isNotEmpty()) {
-                    include(*abiFilterList.toTypedArray())
-                } else {
-                    include("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
-                }
-                isUniversalApk = abiFilterList.isNullOrEmpty()
-            }
+        
+        // تنظیمات مهم برای جلوگیری از کرش در نسخه های دستکاری شده
+        ndk {
+            abiFilters.add("arm64-v8a")
+            abiFilters.add("armeabi-v7a")
+            abiFilters.add("x86_64")
+            abiFilters.add("x86")
         }
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            isShrinkResources = false // جلوگیری از حذف فایل‌های ضروری
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -58,6 +54,7 @@ android {
 
     sourceSets {
         getByName("main") {
+            // اطمینان از اینکه فایل‌های هسته خوانده می‌شوند
             jniLibs.srcDirs("libs")
         }
     }
@@ -93,7 +90,9 @@ android {
 }
 
 dependencies {
-    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))
+    // بارگذاری تمام کتابخانه‌های داخل پوشه libs
+    implementation(fileTree(mapOf("dir" to project.file("libs"), "include" to listOf("*.aar", "*.jar"))))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity)
