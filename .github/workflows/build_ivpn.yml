@@ -1,4 +1,4 @@
-name: Build iVPN APK
+name: Build iVPN APK (Fixed)
 
 on:
   workflow_dispatch:
@@ -19,27 +19,36 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # مرحله اصلاح شده نهایی: گول زدن Gradle 9 با فایل موقت
+    # مرحله ۱ (جدید): ساخت اجباری فایل تنظیمات AndroidX
+    - name: Create gradle.properties
+      run: |
+        echo "android.useAndroidX=true" > gradle.properties
+        echo "android.enableJetifier=true" >> gradle.properties
+        echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> gradle.properties
+        echo "✅ gradle.properties created:"
+        cat gradle.properties
+
+    # مرحله ۲: ساخت موتور گریدل 8.2 (با ترفند قایم کردن فایل‌ها)
     - name: Setup Gradle Wrapper 8.2
       run: |
-        # 1. فایل‌های اصلی پروژه را موقتاً تغییر نام می‌دهیم (بک‌آپ)
+        # بک‌آپ گرفتن از فایل‌های بیلد
         mv settings.gradle.kts settings.gradle.kts.bak 2>/dev/null || true
         mv build.gradle.kts build.gradle.kts.bak 2>/dev/null || true
         
-        # 2. ساخت یک فایل تنظیمات خالی و الکی تا Gradle ارور ندهد
+        # ساخت فایل موقت
         touch settings.gradle
         
-        # 3. حالا گریدل را صدا می‌زنیم تا نسخه 8.2 را دانلود و تنظیم کند
+        # نصب گریدل 8.2
         gradle wrapper --gradle-version 8.2 --distribution-type all
         
-        # 4. فایل الکی را پاک می‌کنیم و فایل‌های اصلی را برمی‌گردانیم
+        # پاکسازی و بازگرداندن فایل‌ها
         rm settings.gradle
         mv settings.gradle.kts.bak settings.gradle.kts 2>/dev/null || true
         mv build.gradle.kts.bak build.gradle.kts 2>/dev/null || true
         
-        # 5. دسترسی اجرا به فایل جدید ساخته شده
         chmod +x gradlew
 
+    # مرحله ۳: دانلود آیکون‌ها
     - name: Fix Missing Icons
       run: |
         mkdir -p app/src/main/res/mipmap-xxhdpi
@@ -47,7 +56,7 @@ jobs:
         wget -O app/src/main/res/mipmap-xxhdpi/ic_launcher.png https://cdn-icons-png.flaticon.com/512/2462/2462840.png
         cp app/src/main/res/mipmap-xxhdpi/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
 
-    # بیلد نهایی با ./gradlew (که الان نسخه 8.2 شده و با پروژه سازگار است)
+    # مرحله ۴: بیلد نهایی
     - name: Build APK
       run: ./gradlew assembleRelease --no-daemon
 
