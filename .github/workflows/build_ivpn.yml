@@ -1,0 +1,47 @@
+name: Build iVPN APK
+
+on:
+  workflow_dispatch: # دکمه اجرای دستی
+  push:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    # مرحله ۱: چون پروژه خام است، باید موتور گریدل را بسازیم
+    - name: Setup Gradle Wrapper
+      run: |
+        gradle wrapper --gradle-version 8.2
+        chmod +x gradlew
+
+    # مرحله ۲: چون آیکون آپلود نکردیم، یک آیکون موقت دانلود می‌کنیم تا بیلد خراب نشود
+    - name: Fix Missing Icons
+      run: |
+        mkdir -p app/src/main/res/mipmap-xxhdpi
+        mkdir -p app/src/main/res/drawable
+        # دانلود یک آیکون سپر بنفش (متناسب با تم iVPN)
+        wget -O app/src/main/res/mipmap-xxhdpi/ic_launcher.png https://cdn-icons-png.flaticon.com/512/2462/2462840.png
+        # کپی برای آیکون گرد
+        cp app/src/main/res/mipmap-xxhdpi/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+
+    # مرحله ۳: ساخت فایل نصبی
+    - name: Build APK
+      run: ./gradlew assembleRelease --no-daemon
+
+    # مرحله ۴: تحویل فایل به شما
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: iVPN-App
+        path: app/build/outputs/apk/release/app-release-unsigned.apk
