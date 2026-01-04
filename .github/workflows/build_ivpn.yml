@@ -1,7 +1,7 @@
 name: Build iVPN APK
 
 on:
-  workflow_dispatch: # دکمه اجرای دستی
+  workflow_dispatch:
   push:
     branches: [ "main", "master" ]
 
@@ -19,27 +19,34 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # مرحله ۱: چون پروژه خام است، باید موتور گریدل را بسازیم
-    - name: Setup Gradle Wrapper
+    # مرحله اصلاح شده: قایم کردن فایل‌ها برای جلوگیری از ارور Gradle 9
+    - name: Setup Gradle Wrapper Safely
       run: |
+        # 1. تغییر نام موقت فایل‌های بیلد (قایم موشک!)
+        mv build.gradle.kts build.gradle.kts.bak 2>/dev/null || true
+        mv settings.gradle.kts settings.gradle.kts.bak 2>/dev/null || true
+        
+        # 2. ساخت موتور گریدل 8.2 (الان دیگه ارور نمیده چون فایلی نیست که بخونه)
         gradle wrapper --gradle-version 8.2
+        
+        # 3. برگرداندن فایل‌ها به اسم اصلی
+        mv build.gradle.kts.bak build.gradle.kts 2>/dev/null || true
+        mv settings.gradle.kts.bak settings.gradle.kts 2>/dev/null || true
+        
         chmod +x gradlew
 
-    # مرحله ۲: چون آیکون آپلود نکردیم، یک آیکون موقت دانلود می‌کنیم تا بیلد خراب نشود
+    # دانلود آیکون موقت (چون آیکون آپلود نکردیم)
     - name: Fix Missing Icons
       run: |
         mkdir -p app/src/main/res/mipmap-xxhdpi
         mkdir -p app/src/main/res/drawable
-        # دانلود یک آیکون سپر بنفش (متناسب با تم iVPN)
         wget -O app/src/main/res/mipmap-xxhdpi/ic_launcher.png https://cdn-icons-png.flaticon.com/512/2462/2462840.png
-        # کپی برای آیکون گرد
         cp app/src/main/res/mipmap-xxhdpi/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
 
-    # مرحله ۳: ساخت فایل نصبی
+    # بیلد نهایی با گریدل 8.2 (که الان ساخته شده)
     - name: Build APK
       run: ./gradlew assembleRelease --no-daemon
 
-    # مرحله ۴: تحویل فایل به شما
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
