@@ -1,4 +1,4 @@
-name: Initialize iVPN Project (Fixed)
+name: Initialize iVPN Project (Final Fix)
 
 on:
   workflow_dispatch:
@@ -24,8 +24,15 @@ jobs:
           mkdir -p gradle/wrapper
 
           # ---------------------------------------------------------
-          # 1. فایل ریشه build.gradle.kts (اضافه شده برای رفع ارور)
+          # 1. فایل gradle.properties (اضافه شده برای حل ارور AndroidX)
           # ---------------------------------------------------------
+          cat <<EOF > gradle.properties
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          EOF
+
+          # 2. فایل ریشه build.gradle.kts
           cat <<EOF > build.gradle.kts
           plugins {
               id("com.android.application") version "8.2.0" apply false
@@ -33,7 +40,7 @@ jobs:
           }
           EOF
 
-          # 2. فایل settings.gradle.kts
+          # 3. فایل settings.gradle.kts
           cat <<EOF > settings.gradle.kts
           pluginManagement {
               repositories {
@@ -53,7 +60,7 @@ jobs:
           include(":app")
           EOF
 
-          # 3. فایل app/build.gradle.kts
+          # 4. فایل app/build.gradle.kts
           cat <<EOF > app/build.gradle.kts
           plugins {
               id("com.android.application")
@@ -100,7 +107,7 @@ jobs:
           }
           EOF
 
-          # 4. فایل AndroidManifest.xml
+          # 5. فایل AndroidManifest.xml
           cat <<EOF > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -133,7 +140,7 @@ jobs:
           </manifest>
           EOF
 
-          # 5. فایل themes.xml
+          # 6. فایل themes.xml
           cat <<EOF > app/src/main/res/values/themes.xml
           <resources xmlns:tools="http://schemas.android.com/tools">
               <style name="Base.Theme.iVPN" parent="Theme.Material3.DayNight.NoActionBar">
@@ -147,7 +154,7 @@ jobs:
           </resources>
           EOF
 
-          # 6. فایل activity_login.xml
+          # 7. فایل activity_login.xml
           cat <<EOF > app/src/main/res/layout/activity_login.xml
           <?xml version="1.0" encoding="utf-8"?>
           <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -202,7 +209,7 @@ jobs:
           </LinearLayout>
           EOF
 
-          # 7. فایل activity_main.xml
+          # 8. فایل activity_main.xml
           cat <<EOF > app/src/main/res/layout/activity_main.xml
           <?xml version="1.0" encoding="utf-8"?>
           <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -253,7 +260,7 @@ jobs:
           </RelativeLayout>
           EOF
 
-          # 8. کد LoginActivity.kt
+          # 9. کد LoginActivity.kt
           cat <<EOF > app/src/main/java/com/ivpn/app/LoginActivity.kt
           package com.ivpn.app
           import android.content.Intent
@@ -331,7 +338,7 @@ jobs:
                                           Toast.makeText(applicationContext, "خطای سرور", Toast.LENGTH_LONG).show()
                                       }
                                   } catch (e: Exception) {
-                                      Toast.makeText(applicationContext, "خطای داده", Toast.LENGTH_LONG).show()
+                                      Toast.makeText(applicationContext, "خطا", Toast.LENGTH_LONG).show()
                                   }
                               }
                           }
@@ -347,7 +354,7 @@ jobs:
           data class UserData(val subscription_url: String)
           EOF
 
-          # 9. کد MainActivity.kt
+          # 10. کد MainActivity.kt
           cat <<EOF > app/src/main/java/com/ivpn/app/MainActivity.kt
           package com.ivpn.app
           import android.content.Intent
@@ -394,5 +401,5 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add .
-          git commit -m "Initialize iVPN Project with fixed Build Config"
+          git commit -m "Initialize iVPN with fixed Gradle properties"
           git push
