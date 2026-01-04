@@ -1,0 +1,390 @@
+name: Initialize iVPN Project
+
+on:
+  workflow_dispatch: # اجرا به صورت دستی
+
+permissions:
+  contents: write
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Project Structure
+        run: |
+          # ساخت پوشه‌ها با پکیج نیم جدید com.ivpn.app
+          mkdir -p app/src/main/java/com/ivpn/app
+          mkdir -p app/src/main/res/layout
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/mipmap-xxhdpi
+          mkdir -p gradle/wrapper
+
+          # 1. فایل settings.gradle.kts
+          cat <<EOF > settings.gradle.kts
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "iVPN"
+          include(":app")
+          EOF
+
+          # 2. فایل app/build.gradle.kts
+          cat <<EOF > app/build.gradle.kts
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+
+          android {
+              namespace = "com.ivpn.app"
+              compileSdk = 34
+
+              defaultConfig {
+                  applicationId = "com.ivpn.app"
+                  minSdk = 24
+                  targetSdk = 34
+                  versionCode = 1
+                  versionName = "1.0.0"
+              }
+
+              buildTypes {
+                  release {
+                      isMinifyEnabled = false
+                      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_1_8
+                  targetCompatibility = JavaVersion.VERSION_1_8
+              }
+              kotlinOptions {
+                  jvmTarget = "1.8"
+              }
+              buildFeatures {
+                  viewBinding = true
+              }
+          }
+
+          dependencies {
+              implementation("androidx.core:core-ktx:1.12.0")
+              implementation("androidx.appcompat:appcompat:1.6.1")
+              implementation("com.google.android.material:material:1.11.0")
+              implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+              implementation("com.squareup.okhttp3:okhttp:4.12.0")
+              implementation("com.google.code.gson:gson:2.10.1")
+          }
+          EOF
+
+          # 3. فایل AndroidManifest.xml
+          cat <<EOF > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="iVPN"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:supportsRtl="true"
+                  android:theme="@style/Theme.iVPN"
+                  tools:targetApi="31">
+                  <activity
+                      android:name=".LoginActivity"
+                      android:exported="true"
+                      android:theme="@style/Theme.iVPN"
+                      android:screenOrientation="portrait">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="false"
+                      android:screenOrientation="portrait"/>
+              </application>
+          </manifest>
+          EOF
+
+          # 4. فایل تم (themes.xml)
+          cat <<EOF > app/src/main/res/values/themes.xml
+          <resources xmlns:tools="http://schemas.android.com/tools">
+              <style name="Base.Theme.iVPN" parent="Theme.Material3.DayNight.NoActionBar">
+                  <item name="colorPrimary">#4F46E5</item>
+                  <item name="colorOnPrimary">#FFFFFF</item>
+                  <item name="android:colorBackground">#0F172A</item>
+                  <item name="colorSurface">#1E293B</item>
+                  <item name="colorOnSurface">#F8FAFC</item>
+              </style>
+              <style name="Theme.iVPN" parent="Base.Theme.iVPN" />
+          </resources>
+          EOF
+
+          # 5. فایل layout لاگین (activity_login.xml)
+          cat <<EOF > app/src/main/res/layout/activity_login.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              android:gravity="center"
+              android:padding="32dp"
+              android:background="#0F172A">
+              <TextView
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text="iVPN"
+                  android:textSize="40sp"
+                  android:textStyle="bold"
+                  android:textColor="#4F46E5"
+                  android:letterSpacing="0.1"
+                  android:layout_marginBottom="48dp"/>
+              <EditText
+                  android:id="@+id/etUsername"
+                  android:layout_width="match_parent"
+                  android:layout_height="50dp"
+                  android:hint="نام کاربری"
+                  android:textColor="#F8FAFC"
+                  android:textColorHint="#94A3B8"
+                  android:background="#1E293B"
+                  android:padding="10dp"
+                  android:layout_marginBottom="16dp"/>
+              <EditText
+                  android:id="@+id/etPassword"
+                  android:layout_width="match_parent"
+                  android:layout_height="50dp"
+                  android:hint="رمز عبور"
+                  android:inputType="textPassword"
+                  android:textColor="#F8FAFC"
+                  android:textColorHint="#94A3B8"
+                  android:background="#1E293B"
+                  android:padding="10dp"/>
+              <Button
+                  android:id="@+id/btnLogin"
+                  android:layout_width="match_parent"
+                  android:layout_height="60dp"
+                  android:text="ورود به iVPN"
+                  android:layout_marginTop="32dp"
+                  android:backgroundTint="#4F46E5"/>
+              <ProgressBar
+                  android:id="@+id/progressBar"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_marginTop="20dp"
+                  android:visibility="gone"/>
+          </LinearLayout>
+          EOF
+
+          # 6. فایل layout اصلی (activity_main.xml)
+          cat <<EOF > app/src/main/res/layout/activity_main.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:background="#0F172A"
+              android:padding="20dp">
+              <TextView
+                  android:id="@+id/tvTitle"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text="iVPN"
+                  android:textColor="#FFFFFF"
+                  android:textSize="24sp"
+                  android:textStyle="bold"
+                  android:layout_centerHorizontal="true"
+                  android:layout_marginTop="30dp"/>
+              <TextView
+                  android:id="@+id/tvStatus"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text="قطع شده"
+                  android:textSize="18sp"
+                  android:textColor="#94A3B8"
+                  android:layout_below="@id/tvTitle"
+                  android:layout_centerHorizontal="true"
+                  android:layout_marginTop="10dp"/>
+              <Button
+                  android:id="@+id/btnConnect"
+                  android:layout_width="200dp"
+                  android:layout_height="200dp"
+                  android:text="اتصال"
+                  android:textSize="24sp"
+                  android:textStyle="bold"
+                  android:textColor="#FFFFFF"
+                  android:backgroundTint="#1E293B"
+                  android:layout_centerInParent="true"/>
+              <Button
+                  android:id="@+id/btnLogout"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text="خروج از حساب"
+                  android:textColor="#EF4444"
+                  android:backgroundTint="#1E293B"
+                  android:layout_alignParentBottom="true"
+                  android:layout_centerHorizontal="true"
+                  android:layout_marginBottom="40dp"/>
+          </RelativeLayout>
+          EOF
+
+          # 7. کد LoginActivity.kt
+          cat <<EOF > app/src/main/java/com/ivpn/app/LoginActivity.kt
+          package com.ivpn.app
+          import android.content.Intent
+          import android.os.Bundle
+          import android.view.View
+          import android.widget.Button
+          import android.widget.EditText
+          import android.widget.ProgressBar
+          import android.widget.Toast
+          import androidx.appcompat.app.AppCompatActivity
+          import com.google.gson.Gson
+          import okhttp3.*
+          import okhttp3.MediaType.Companion.toMediaTypeOrNull
+          import okhttp3.RequestBody.Companion.toRequestBody
+          import java.io.IOException
+
+          class LoginActivity : AppCompatActivity() {
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  setContentView(R.layout.activity_login)
+                  val prefs = getSharedPreferences("ivpn_data", MODE_PRIVATE)
+                  if (prefs.getBoolean("is_logged_in", false)) {
+                      goToMain()
+                      return
+                  }
+                  val etUser = findViewById<EditText>(R.id.etUsername)
+                  val etPass = findViewById<EditText>(R.id.etPassword)
+                  val btnLogin = findViewById<Button>(R.id.btnLogin)
+                  val loading = findViewById<ProgressBar>(R.id.progressBar)
+
+                  btnLogin.setOnClickListener {
+                      val user = etUser.text.toString()
+                      val pass = etPass.text.toString()
+                      if (user.isEmpty() || pass.isEmpty()) {
+                          Toast.makeText(this, "لطفا اطلاعات را وارد کنید", Toast.LENGTH_SHORT).show()
+                          return@setOnClickListener
+                      }
+                      loading.visibility = View.VISIBLE
+                      btnLogin.isEnabled = false
+                      val client = OkHttpClient()
+                      val json = "{\"username\":\"\$user\", \"password\":\"\$pass\"}"
+                      val body = json.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+                      val request = Request.Builder()
+                          .url("https://fachur.ir/panel.php?api=login")
+                          .post(body)
+                          .build()
+                      client.newCall(request).enqueue(object : Callback {
+                          override fun onFailure(call: Call, e: IOException) {
+                              runOnUiThread {
+                                  loading.visibility = View.GONE
+                                  btnLogin.isEnabled = true
+                                  Toast.makeText(applicationContext, "خطا: \${e.message}", Toast.LENGTH_LONG).show()
+                              }
+                          }
+                          override fun onResponse(call: Call, response: Response) {
+                              val respBody = response.body?.string()
+                              runOnUiThread {
+                                  loading.visibility = View.GONE
+                                  btnLogin.isEnabled = true
+                                  try {
+                                      if (response.isSuccessful && respBody != null) {
+                                          val gson = Gson()
+                                          val apiResponse = gson.fromJson(respBody, ApiResponse::class.java)
+                                          if (apiResponse.success) {
+                                              prefs.edit()
+                                                  .putBoolean("is_logged_in", true)
+                                                  .putString("sub_link", apiResponse.data.subscription_url)
+                                                  .putString("username", user)
+                                                  .apply()
+                                              goToMain()
+                                          } else {
+                                              Toast.makeText(applicationContext, apiResponse.message ?: "اطلاعات اشتباه است", Toast.LENGTH_LONG).show()
+                                          }
+                                      } else {
+                                          Toast.makeText(applicationContext, "خطای سرور", Toast.LENGTH_LONG).show()
+                                      }
+                                  } catch (e: Exception) {
+                                      Toast.makeText(applicationContext, "خطا", Toast.LENGTH_LONG).show()
+                                  }
+                              }
+                          }
+                      })
+                  }
+              }
+              private fun goToMain() {
+                  startActivity(Intent(this, MainActivity::class.java))
+                  finish()
+              }
+          }
+          data class ApiResponse(val success: Boolean, val data: UserData, val message: String?)
+          data class UserData(val subscription_url: String)
+          EOF
+
+          # 8. کد MainActivity.kt
+          cat <<EOF > app/src/main/java/com/ivpn/app/MainActivity.kt
+          package com.ivpn.app
+          import android.content.Intent
+          import android.graphics.Color
+          import android.os.Bundle
+          import android.widget.Button
+          import android.widget.TextView
+          import android.widget.Toast
+          import androidx.appcompat.app.AppCompatActivity
+
+          class MainActivity : AppCompatActivity() {
+              private var isConnected = false
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  setContentView(R.layout.activity_main)
+                  val prefs = getSharedPreferences("ivpn_data", MODE_PRIVATE)
+                  val subLink = prefs.getString("sub_link", "No Link")
+                  val btnConnect = findViewById<Button>(R.id.btnConnect)
+                  val tvStatus = findViewById<TextView>(R.id.tvStatus)
+                  val btnLogout = findViewById<Button>(R.id.btnLogout)
+
+                  btnConnect.setOnClickListener {
+                      if (!isConnected) {
+                          isConnected = true
+                          tvStatus.text = "متصل شد"
+                          tvStatus.setTextColor(Color.parseColor("#10B981"))
+                          btnConnect.setBackgroundColor(Color.parseColor("#374151"))
+                          Toast.makeText(this, "لینک دریافت شد: \$subLink", Toast.LENGTH_LONG).show()
+                      } else {
+                          isConnected = false
+                          tvStatus.text = "قطع شده"
+                          tvStatus.setTextColor(Color.parseColor("#94A3B8"))
+                          btnConnect.setBackgroundColor(Color.parseColor("#1E293B"))
+                      }
+                  }
+                  btnLogout.setOnClickListener {
+                      prefs.edit().clear().apply()
+                      startActivity(Intent(this, LoginActivity::class.java))
+                      finish()
+                  }
+              }
+          }
+          EOF
+
+      - name: Commit Files
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add .
+          git commit -m "Auto-generated iVPN structure"
+          git push
