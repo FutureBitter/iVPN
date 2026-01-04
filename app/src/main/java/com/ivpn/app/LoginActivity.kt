@@ -74,7 +74,7 @@ class LoginActivity : AppCompatActivity() {
                                 Toast.makeText(applicationContext, "خطای سرور", Toast.LENGTH_LONG).show()
                             }
                         } catch (e: Exception) {
-                            Toast.makeText(applicationContext, "خطای داده", Toast.LENGTH_LONG).show()
+                            Toast.makeText(applicationContext, "خطا", Toast.LENGTH_LONG).show()
                         }
                     }
                 }
