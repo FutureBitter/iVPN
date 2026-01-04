@@ -19,23 +19,27 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # مرحله اصلاح شده: قایم کردن فایل‌ها برای جلوگیری از ارور Gradle 9
-    - name: Setup Gradle Wrapper Safely
+    # مرحله اصلاح شده نهایی: گول زدن Gradle 9 با فایل موقت
+    - name: Setup Gradle Wrapper 8.2
       run: |
-        # 1. تغییر نام موقت فایل‌های بیلد (قایم موشک!)
-        mv build.gradle.kts build.gradle.kts.bak 2>/dev/null || true
+        # 1. فایل‌های اصلی پروژه را موقتاً تغییر نام می‌دهیم (بک‌آپ)
         mv settings.gradle.kts settings.gradle.kts.bak 2>/dev/null || true
+        mv build.gradle.kts build.gradle.kts.bak 2>/dev/null || true
         
-        # 2. ساخت موتور گریدل 8.2 (الان دیگه ارور نمیده چون فایلی نیست که بخونه)
-        gradle wrapper --gradle-version 8.2
+        # 2. ساخت یک فایل تنظیمات خالی و الکی تا Gradle ارور ندهد
+        touch settings.gradle
         
-        # 3. برگرداندن فایل‌ها به اسم اصلی
-        mv build.gradle.kts.bak build.gradle.kts 2>/dev/null || true
+        # 3. حالا گریدل را صدا می‌زنیم تا نسخه 8.2 را دانلود و تنظیم کند
+        gradle wrapper --gradle-version 8.2 --distribution-type all
+        
+        # 4. فایل الکی را پاک می‌کنیم و فایل‌های اصلی را برمی‌گردانیم
+        rm settings.gradle
         mv settings.gradle.kts.bak settings.gradle.kts 2>/dev/null || true
+        mv build.gradle.kts.bak build.gradle.kts 2>/dev/null || true
         
+        # 5. دسترسی اجرا به فایل جدید ساخته شده
         chmod +x gradlew
 
-    # دانلود آیکون موقت (چون آیکون آپلود نکردیم)
     - name: Fix Missing Icons
       run: |
         mkdir -p app/src/main/res/mipmap-xxhdpi
@@ -43,7 +47,7 @@ jobs:
         wget -O app/src/main/res/mipmap-xxhdpi/ic_launcher.png https://cdn-icons-png.flaticon.com/512/2462/2462840.png
         cp app/src/main/res/mipmap-xxhdpi/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
 
-    # بیلد نهایی با گریدل 8.2 (که الان ساخته شده)
+    # بیلد نهایی با ./gradlew (که الان نسخه 8.2 شده و با پروژه سازگار است)
     - name: Build APK
       run: ./gradlew assembleRelease --no-daemon
 
