@@ -48,7 +48,7 @@ class LoginActivity : AppCompatActivity() {
                     runOnUiThread {
                         loading.visibility = View.GONE
                         btnLogin.isEnabled = true
-                        Toast.makeText(applicationContext, "خطا: ${e.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(applicationContext, "خطا در اتصال", Toast.LENGTH_LONG).show()
                     }
                 }
                 override fun onResponse(call: Call, response: Response) {
@@ -74,7 +74,7 @@ class LoginActivity : AppCompatActivity() {
                                 Toast.makeText(applicationContext, "خطای سرور", Toast.LENGTH_LONG).show()
                             }
                         } catch (e: Exception) {
-                            Toast.makeText(applicationContext, "خطا", Toast.LENGTH_LONG).show()
+                            Toast.makeText(applicationContext, "خطای داده", Toast.LENGTH_LONG).show()
                         }
                     }
                 }

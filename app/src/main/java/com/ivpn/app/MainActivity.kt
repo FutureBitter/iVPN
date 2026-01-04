@@ -4,7 +4,6 @@ import android.graphics.Color
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
@@ -13,7 +12,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         val prefs = getSharedPreferences("ivpn_data", MODE_PRIVATE)
-        val subLink = prefs.getString("sub_link", "No Link")
         val btnConnect = findViewById<Button>(R.id.btnConnect)
         val tvStatus = findViewById<TextView>(R.id.tvStatus)
         val btnLogout = findViewById<Button>(R.id.btnLogout)
@@ -24,7 +22,6 @@ class MainActivity : AppCompatActivity() {
                 tvStatus.text = "متصل شد"
                 tvStatus.setTextColor(Color.parseColor("#10B981"))
                 btnConnect.setBackgroundColor(Color.parseColor("#374151"))
-                Toast.makeText(this, "لینک دریافت شد: $subLink", Toast.LENGTH_LONG).show()
             } else {
                 isConnected = false
                 tvStatus.text = "قطع شده"
