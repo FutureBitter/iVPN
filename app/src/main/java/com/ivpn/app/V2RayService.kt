@@ -13,7 +13,6 @@ import libv2ray.CoreCallbackHandler
 
 class V2RayService : VpnService() {
     private var mInterface: ParcelFileDescriptor? = null
-    // استفاده از کنترلر جدید (CoreController) که با هسته XrayLite هماهنگ است
     private val core = Libv2ray.newCoreController(V2RayCallback())
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -56,7 +55,6 @@ class V2RayService : VpnService() {
         try {
             mInterface = builder.establish()
             
-            // استارت هسته با متد جدید startLoop
             try {
                 core.startLoop(config)
             } catch (e: Exception) {
@@ -86,12 +84,9 @@ class V2RayService : VpnService() {
         super.onDestroy()
     }
     
-    // کالبک جدید برای XrayLite
+    // کالبک اصلاح شده و هماهنگ با هسته جدید
     class V2RayCallback : CoreCallbackHandler {
-        override fun onEmitStatus(l: Long, s: String?) {}
-        override fun prepare(): Long { return 0 }
-        override fun protect(l: Long): Long { return 0 }
-        override fun setup(s: String?): Long { return 0 }
-        override fun shutdown(): Long { return 0 }
+        override fun onEmitStatus(l: Long, s: String?): Long { return 0 }
+        override fun startup(): Long { return 0 } // اضافه شده
     }
 }
