@@ -15,6 +15,10 @@ jobs:
 
       - name: Create UI Layouts
         run: |
+          # ساخت پوشه‌های ضروری (رفع ارور No such file)
+          mkdir -p app/src/main/res/drawable
+          mkdir -p app/src/main/res/layout
+          
           # 1. طراحی جدید صفحه اصلی (لیست + نوار حجم)
           cat <<EOF > app/src/main/res/layout/activity_main.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -35,7 +39,7 @@ jobs:
                       android:id="@+id/tvTitle"
                       android:layout_width="wrap_content"
                       android:layout_height="wrap_content"
-                      android:text="FUTURIX"
+                      android:text="iVPN"
                       android:textColor="#FFFFFF"
                       android:textSize="20sp"
                       android:textStyle="bold"/>
@@ -213,7 +217,6 @@ jobs:
       - name: Create Logic Classes
         run: |
           # 4. ابزار پارس کانفیگ (V2RayConfigUtil.kt)
-          # این کلاس حیاتی است: لینک را می‌گیرد و به JSON تبدیل می‌کند (رفع مشکل کرش)
           mkdir -p app/src/main/java/com/ivpn/app/util
           cat <<EOF > app/src/main/java/com/ivpn/app/util/V2RayConfigUtil.kt
           package com.ivpn.app.util
@@ -221,6 +224,8 @@ jobs:
           import android.util.Base64
           import org.json.JSONObject
           import java.net.URI
+          import java.net.URLDecoder
+          import java.nio.charset.StandardCharsets
           
           object V2RayConfigUtil {
               data class ConfigItem(val name: String, val uri: String, var ping: Long = -1, var isSelected: Boolean = false)
@@ -228,61 +233,54 @@ jobs:
               fun parseSubscription(content: String): List<ConfigItem> {
                   val list = mutableListOf<ConfigItem>()
                   try {
-                      // 1. Decode Base64 if needed
+                      // Decode Base64 if needed
                       val decoded = try {
-                          String(Base64.decode(content, Base64.DEFAULT))
+                          String(Base64.decode(content, Base64.DEFAULT), StandardCharsets.UTF_8)
                       } catch (e: Exception) { content }
                       
-                      // 2. Split lines
                       decoded.lines().forEach { line ->
                           val trimmed = line.trim()
                           if (trimmed.startsWith("vless://")) {
-                              val name = java.net.URLDecoder.decode(trimmed.substringAfter("#"), "UTF-8")
-                              list.add(ConfigItem(name, trimmed))
+                              try {
+                                  val name = URLDecoder.decode(trimmed.substringAfter("#"), "UTF-8")
+                                  list.add(ConfigItem(name, trimmed))
+                              } catch(e: Exception) {
+                                  list.add(ConfigItem("Server", trimmed))
+                              }
                           }
                       }
                   } catch (e: Exception) { e.printStackTrace() }
                   return list
               }
 
-              // تبدیل VLESS به JSON برای هسته (رفع مشکل کرش)
+              // تبدیل VLESS به JSON برای هسته
               fun generateV2RayJson(uriString: String): String {
                   try {
-                      // پارس ساده برای استخراج اطلاعات اصلی
                       val uri = URI(uriString) // vless://uuid@ip:port?query#name
-                      val userInfo = uri.userInfo // uuid
+                      val userInfo = uri.userInfo
                       val host = uri.host
                       val port = uri.port
-                      val query = uri.query
+                      val query = uri.query ?: ""
                       
-                      // تنظیمات پیش‌فرض JSON
                       val json = JSONObject()
-                      
-                      // لاگ
-                      val log = JSONObject()
-                      log.put("loglevel", "warning")
+                      val log = JSONObject().put("loglevel", "warning")
                       json.put("log", log)
                       
-                      // Inbounds
                       val inbounds = org.json.JSONArray()
                       val inbound = JSONObject()
                       inbound.put("port", 10808)
                       inbound.put("listen", "127.0.0.1")
                       inbound.put("protocol", "socks")
                       inbound.put("tag", "socks")
-                      val inSettings = JSONObject()
-                      inSettings.put("udp", true)
-                      inbound.put("settings", inSettings)
+                      inbound.put("settings", JSONObject().put("udp", true))
                       inbounds.put(inbound)
                       json.put("inbounds", inbounds)
                       
-                      // Outbounds (VLESS)
                       val outbounds = org.json.JSONArray()
                       val outbound = JSONObject()
                       outbound.put("tag", "proxy")
                       outbound.put("protocol", "vless")
                       
-                      val settings = JSONObject()
                       val vnext = org.json.JSONArray()
                       val server = JSONObject()
                       server.put("address", host)
@@ -294,17 +292,16 @@ jobs:
                       users.put(user)
                       server.put("users", users)
                       vnext.put(server)
+                      
+                      val settings = JSONObject()
                       settings.put("vnext", vnext)
                       outbound.put("settings", settings)
                       
-                      // Stream Settings (ساده‌سازی شده)
                       val stream = JSONObject()
-                      stream.put("network", "tcp") // پیش‌فرض
+                      stream.put("network", "tcp")
                       if (query.contains("type=ws")) {
                           stream.put("network", "ws")
-                          val ws = JSONObject()
-                          ws.put("path", "/") 
-                          stream.put("wsSettings", ws)
+                          stream.put("wsSettings", JSONObject().put("path", "/").put("headers", JSONObject()))
                       }
                       if (query.contains("security=tls")) {
                           stream.put("security", "tls")
@@ -334,6 +331,7 @@ jobs:
           import android.widget.TextView
           import androidx.recyclerview.widget.RecyclerView
           import com.ivpn.app.util.V2RayConfigUtil.ConfigItem
+          import com.ivpn.app.R
 
           class ConfigAdapter(
               private var items: List<ConfigItem>,
@@ -424,12 +422,12 @@ jobs:
                   
                   val prefs = getSharedPreferences("ivpn_data", MODE_PRIVATE)
                   val username = prefs.getString("username", "") ?: ""
-                  val subLink = prefs.getString("sub_link", "") ?: ""
                   
                   // Setup UI
                   val btnLogout = findViewById<ImageView>(R.id.btnLogout)
                   val tvUsed = findViewById<TextView>(R.id.tvUsed)
                   val tvTotal = findViewById<TextView>(R.id.tvTotal)
+                  val tvExpire = findViewById<TextView>(R.id.tvExpire)
                   val progress = findViewById<ProgressBar>(R.id.progressTraffic)
                   val recycler = findViewById<RecyclerView>(R.id.recyclerConfigs)
                   val btnConnect = findViewById<Button>(R.id.btnConnectMain)
@@ -446,4 +444,128 @@ jobs:
                       finish()
                   }
 
-          
+                  btnConnect.setOnClickListener {
+                      if (!isConnected) {
+                          if (selectedConfig == null) {
+                              Toast.makeText(this, "لطفا یک سرور انتخاب کنید", Toast.LENGTH_SHORT).show()
+                              return@setOnClickListener
+                          }
+                          val intent = VpnService.prepare(this)
+                          if (intent != null) {
+                              startActivityForResult(intent, 1)
+                          } else {
+                              startVpn()
+                          }
+                      } else {
+                          stopVpn()
+                      }
+                  }
+
+                  // 1. لاگین مجدد برای دریافت حجم و لینک
+                  refreshUserData(username, prefs.getString("sub_link", "") ?: "")
+              }
+
+              override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+                  super.onActivityResult(requestCode, resultCode, data)
+                  if (requestCode == 1 && resultCode == RESULT_OK) {
+                      startVpn()
+                  }
+              }
+
+              private fun refreshUserData(username: String, fallbackLink: String) {
+                  val client = OkHttpClient()
+                  
+                  // الف) دریافت کانفیگ‌ها از لینک سابسکریپشن
+                  if (fallbackLink.isNotEmpty()) {
+                      val request = Request.Builder().url(fallbackLink).build()
+                      client.newCall(request).enqueue(object : Callback {
+                          override fun onFailure(call: Call, e: IOException) { }
+                          override fun onResponse(call: Call, response: Response) {
+                              val body = response.body?.string()
+                              if (body != null) {
+                                  val parsed = V2RayConfigUtil.parseSubscription(body)
+                                  runOnUiThread {
+                                      configList.clear()
+                                      configList.addAll(parsed)
+                                      adapter.updateList(configList)
+                                      testPings() // شروع تست پینگ
+                                  }
+                              }
+                          }
+                      })
+                  }
+                  
+                  // ب) دریافت حجم از API لاگین (آپدیت مخفی)
+                  // اینجا چون رمز را نداریم، فعلا فقط از کش استفاده میکنیم یا کاربر باید لاگین مجدد کند
+                  // در نسخه پیشرفته باید توکن ذخیره کنیم. فعلا این بخش را ساده میگیریم.
+              }
+
+              private fun selectConfig(item: ConfigItem) {
+                  configList.forEach { it.isSelected = false }
+                  item.isSelected = true
+                  selectedConfig = item
+                  adapter.updateList(configList)
+              }
+
+              private fun testPings() {
+                  thread {
+                      configList.forEachIndexed { index, item ->
+                          try {
+                              val uri = URI(item.uri)
+                              val start = System.currentTimeMillis()
+                              val socket = Socket()
+                              socket.connect(InetSocketAddress(uri.host, uri.port), 2000) 
+                              socket.close()
+                              item.ping = System.currentTimeMillis() - start
+                          } catch (e: Exception) {
+                              item.ping = -1 
+                          }
+                          runOnUiThread { adapter.notifyItemChanged(index) }
+                      }
+                      // سورت کردن: اول پینگ‌دارها، بعد بقیه
+                      configList.sortBy { if (it.ping > 0) it.ping else 9999 }
+                      runOnUiThread { 
+                          adapter.updateList(configList)
+                          if (configList.isNotEmpty() && selectedConfig == null) {
+                              selectConfig(configList[0]) // انتخاب بهترین به صورت خودکار
+                          }
+                      }
+                  }
+              }
+
+              private fun startVpn() {
+                  selectedConfig?.let { config ->
+                      // تبدیل لینک VLESS به JSON استاندارد Xray
+                      val jsonConfig = V2RayConfigUtil.generateV2RayJson(config.uri)
+                      
+                      if (jsonConfig.isNotEmpty()) {
+                          val intent = Intent(this, V2RayService::class.java)
+                          intent.putExtra("CONFIG_CONTENT", jsonConfig)
+                          startForegroundService(intent)
+                          isConnected = true
+                          findViewById<Button>(R.id.btnConnectMain).text = "قطع اتصال"
+                          findViewById<Button>(R.id.btnConnectMain).setBackgroundColor(Color.parseColor("#374151"))
+                      } else {
+                          Toast.makeText(this, "فرمت کانفیگ پشتیبانی نمی‌شود", Toast.LENGTH_SHORT).show()
+                      }
+                  }
+              }
+
+              private fun stopVpn() {
+                  val intent = Intent(this, V2RayService::class.java)
+                  intent.action = "STOP"
+                  startService(intent)
+                  isConnected = false
+                  findViewById<Button>(R.id.btnConnectMain).text = "اتصال هوشمند"
+                  findViewById<Button>(R.id.btnConnectMain).setBackgroundColor(Color.parseColor("#4F46E5"))
+              }
+          }
+          EOF
+
+      - name: Commit Changes
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add .
+          git commit -m "Inject Pro Features (Fixed Directory)"
+          git push
