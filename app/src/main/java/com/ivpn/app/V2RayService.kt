@@ -45,7 +45,6 @@ class V2RayService : VpnService() {
         
         startForeground(1, notification)
 
-        // تنظیم تانل VPN
         val builder = Builder()
         builder.setSession("iVPN")
         builder.setMtu(1500)
@@ -54,13 +53,11 @@ class V2RayService : VpnService() {
         
         try {
             mInterface = builder.establish()
-            
             try {
                 core.startLoop(config)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-            
         } catch (e: Exception) {
             e.printStackTrace()
             stopSelf()
@@ -84,9 +81,10 @@ class V2RayService : VpnService() {
         super.onDestroy()
     }
     
-    // کالبک اصلاح شده و هماهنگ با هسته جدید
+    // کالبک نهایی و کامل (شامل startup و shutdown)
     class V2RayCallback : CoreCallbackHandler {
         override fun onEmitStatus(l: Long, s: String?): Long { return 0 }
-        override fun startup(): Long { return 0 } // اضافه شده
+        override fun startup(): Long { return 0 }
+        override fun shutdown(): Long { return 0 } // متد اضافه شده برای رفع ارور
     }
 }
