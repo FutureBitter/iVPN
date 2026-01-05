@@ -1,4 +1,4 @@
-name: Build iVPN APK (Fixed)
+name: Build iVPN APK (With Core)
 
 on:
   workflow_dispatch:
@@ -19,36 +19,31 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # مرحله ۱ (جدید): ساخت اجباری فایل تنظیمات AndroidX
-    - name: Create gradle.properties
+    # مرحله جدید: دانلود هسته V2Ray
+    - name: Download V2Ray Core
       run: |
-        echo "android.useAndroidX=true" > gradle.properties
-        echo "android.enableJetifier=true" >> gradle.properties
-        echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> gradle.properties
-        echo "✅ gradle.properties created:"
-        cat gradle.properties
-
-    # مرحله ۲: ساخت موتور گریدل 8.2 (با ترفند قایم کردن فایل‌ها)
-    - name: Setup Gradle Wrapper 8.2
+        mkdir -p app/libs
+        echo "Downloading libv2ray.aar..."
+        # دانلود از مخزن رسمی 2dust
+        wget -O app/libs/libv2ray.aar https://github.com/2dust/AndroidLibXrayLite/releases/download/v25.12.8/libv2ray.aar
+        
+    - name: Setup Gradle Wrapper
       run: |
-        # بک‌آپ گرفتن از فایل‌های بیلد
+        # ساخت گریدل با ترفند قبلی
         mv settings.gradle.kts settings.gradle.kts.bak 2>/dev/null || true
         mv build.gradle.kts build.gradle.kts.bak 2>/dev/null || true
-        
-        # ساخت فایل موقت
         touch settings.gradle
-        
-        # نصب گریدل 8.2
         gradle wrapper --gradle-version 8.2 --distribution-type all
-        
-        # پاکسازی و بازگرداندن فایل‌ها
         rm settings.gradle
         mv settings.gradle.kts.bak settings.gradle.kts 2>/dev/null || true
         mv build.gradle.kts.bak build.gradle.kts 2>/dev/null || true
-        
         chmod +x gradlew
 
-    # مرحله ۳: دانلود آیکون‌ها
+        # ساخت فایل تنظیمات AndroidX
+        echo "android.useAndroidX=true" > gradle.properties
+        echo "android.enableJetifier=true" >> gradle.properties
+        echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> gradle.properties
+
     - name: Fix Missing Icons
       run: |
         mkdir -p app/src/main/res/mipmap-xxhdpi
@@ -56,12 +51,17 @@ jobs:
         wget -O app/src/main/res/mipmap-xxhdpi/ic_launcher.png https://cdn-icons-png.flaticon.com/512/2462/2462840.png
         cp app/src/main/res/mipmap-xxhdpi/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
 
-    # مرحله ۴: بیلد نهایی
+    # مرحله مهم: آپدیت فایل گریدل اپ برای شناسایی پوشه libs
+    - name: Link Libs in Gradle
+      run: |
+        # اضافه کردن دستور fileTree به dependencies
+        sed -i 's|dependencies {|dependencies {\n    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))|' app/build.gradle.kts
+
     - name: Build APK
       run: ./gradlew assembleRelease --no-daemon
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: iVPN-App
+        name: iVPN-App-Final
         path: app/build/outputs/apk/release/app-release-unsigned.apk
