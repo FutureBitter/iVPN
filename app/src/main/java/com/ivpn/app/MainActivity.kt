@@ -20,8 +20,6 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URI
 import kotlin.concurrent.thread
-import com.google.gson.Gson
-import org.json.JSONObject
 
 class MainActivity : AppCompatActivity() {
     private var isConnected = false
@@ -31,57 +29,63 @@ class MainActivity : AppCompatActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        
-        val prefs = getSharedPreferences("ivpn_data", MODE_PRIVATE)
-        val username = prefs.getString("username", "") ?: ""
-        val subLink = prefs.getString("sub_link", "") ?: ""
-        
-        // المان‌های UI با ID های صحیح
-        val btnLogout = findViewById<ImageView>(R.id.btnLogout)
-        val tvUsed = findViewById<TextView>(R.id.tvUsed)
-        val tvTotal = findViewById<TextView>(R.id.tvTotal)
-        val tvExpire = findViewById<TextView>(R.id.tvExpire)
-        val progress = findViewById<ProgressBar>(R.id.progressTraffic)
-        val recycler = findViewById<RecyclerView>(R.id.recyclerConfigs)
-        val btnConnect = findViewById<Button>(R.id.btnConnectMain) // دکمه جدید
+        try {
+            setContentView(R.layout.activity_main)
+            
+            val prefs = getSharedPreferences("ivpn_data", MODE_PRIVATE)
+            val username = prefs.getString("username", "") ?: ""
+            val subLink = prefs.getString("sub_link", "") ?: ""
+            
+            // تعریف متغیرها با ایمنی بالا (اگر ویجت پیدا نشد کرش نکند)
+            val btnLogout = findViewById<ImageView>(R.id.btnLogout)
+            val tvUsed = findViewById<TextView>(R.id.tvUsed)
+            val tvTotal = findViewById<TextView>(R.id.tvTotal)
+            val progress = findViewById<ProgressBar>(R.id.progressTraffic)
+            val recycler = findViewById<RecyclerView>(R.id.recyclerConfigs)
+            val btnConnect = findViewById<Button>(R.id.btnConnectMain)
 
-        recycler.layoutManager = LinearLayoutManager(this)
-        adapter = ConfigAdapter(configList) { item ->
-            selectConfig(item)
-        }
-        recycler.adapter = adapter
+            if (recycler != null) {
+                recycler.layoutManager = LinearLayoutManager(this)
+                adapter = ConfigAdapter(configList) { item ->
+                    selectConfig(item)
+                }
+                recycler.adapter = adapter
+            }
 
-        btnLogout.setOnClickListener {
-            prefs.edit().clear().apply()
+            btnLogout?.setOnClickListener {
+                prefs.edit().clear().apply()
+                startActivity(Intent(this, LoginActivity::class.java))
+                finish()
+            }
+
+            btnConnect?.setOnClickListener {
+                if (!isConnected) {
+                    if (selectedConfig == null) {
+                        Toast.makeText(this, "لطفا یک سرور انتخاب کنید (یا صبر کنید لیست لود شود)", Toast.LENGTH_SHORT).show()
+                        return@setOnClickListener
+                    }
+                    val intent = VpnService.prepare(this)
+                    if (intent != null) {
+                        startActivityForResult(intent, 1)
+                    } else {
+                        startVpn()
+                    }
+                } else {
+                    stopVpn()
+                }
+            }
+
+            // دریافت اطلاعات
+            fetchUserData(subLink)
+            
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "خطای گرافیکی: ${e.message}", Toast.LENGTH_LONG).show()
+            // اگر خطای شدید بود، به صفحه لاگین برگرد
+            getSharedPreferences("ivpn_data", MODE_PRIVATE).edit().clear().apply()
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
         }
-
-        btnConnect.setOnClickListener {
-            if (!isConnected) {
-                if (selectedConfig == null) {
-                    Toast.makeText(this, "لطفا یک سرور انتخاب کنید", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-                val intent = VpnService.prepare(this)
-                if (intent != null) {
-                    startActivityForResult(intent, 1)
-                } else {
-                    startVpn()
-                }
-            } else {
-                stopVpn()
-            }
-        }
-
-        // پر کردن اطلاعات حجم (فعلا نمایشی تا به API وصل شود)
-        tvUsed.text = "مصرف: ۰ گیگابایت"
-        tvTotal.text = "کل: نامحدود"
-        progress.progress = 0
-
-        // دریافت لیست سرورها
-        fetchUserData(subLink)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -97,7 +101,7 @@ class MainActivity : AppCompatActivity() {
             val request = Request.Builder().url(fallbackLink).build()
             client.newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
-                    runOnUiThread { Toast.makeText(applicationContext, "خطا در دریافت لیست سرورها", Toast.LENGTH_SHORT).show() }
+                    runOnUiThread { Toast.makeText(applicationContext, "خطا در دریافت لیست", Toast.LENGTH_SHORT).show() }
                 }
                 override fun onResponse(call: Call, response: Response) {
                     val body = response.body?.string()
@@ -106,17 +110,22 @@ class MainActivity : AppCompatActivity() {
                         runOnUiThread {
                             configList.clear()
                             configList.addAll(parsed)
-                            adapter.updateList(configList)
+                            if (::adapter.isInitialized) {
+                                adapter.updateList(configList)
+                            }
+                            
                             if (configList.isNotEmpty()) {
                                 selectConfig(configList[0])
                                 testPings()
                             } else {
-                                Toast.makeText(applicationContext, "سروری یافت نشد", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(applicationContext, "لیست سرور خالی است", Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
                 }
             })
+        } else {
+            Toast.makeText(this, "لینک اشتراک یافت نشد", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -124,7 +133,7 @@ class MainActivity : AppCompatActivity() {
         configList.forEach { it.isSelected = false }
         item.isSelected = true
         selectedConfig = item
-        adapter.updateList(configList)
+        if (::adapter.isInitialized) adapter.updateList(configList)
     }
 
     private fun testPings() {
@@ -140,35 +149,45 @@ class MainActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     item.ping = -1 
                 }
-                runOnUiThread { adapter.notifyItemChanged(index) }
+                runOnUiThread { 
+                    if (::adapter.isInitialized) adapter.notifyItemChanged(index) 
+                }
             }
             configList.sortBy { if (it.ping > 0) it.ping else 9999 }
-            runOnUiThread { adapter.updateList(configList) }
+            runOnUiThread { 
+                if (::adapter.isInitialized) adapter.updateList(configList) 
+            }
         }
     }
 
     private fun startVpn() {
         selectedConfig?.let { config ->
-            val jsonConfig = V2RayConfigUtil.generateV2RayJson(config.uri)
-            if (jsonConfig.isNotEmpty()) {
-                val intent = Intent(this, V2RayService::class.java)
-                intent.putExtra("CONFIG_CONTENT", jsonConfig)
-                startForegroundService(intent)
-                isConnected = true
-                findViewById<Button>(R.id.btnConnectMain).text = "قطع اتصال"
-                findViewById<Button>(R.id.btnConnectMain).setBackgroundColor(Color.parseColor("#374151"))
-            } else {
-                Toast.makeText(this, "کانفیگ نامعتبر است", Toast.LENGTH_SHORT).show()
+            try {
+                val jsonConfig = V2RayConfigUtil.generateV2RayJson(config.uri)
+                if (jsonConfig.isNotEmpty()) {
+                    val intent = Intent(this, V2RayService::class.java)
+                    intent.putExtra("CONFIG_CONTENT", jsonConfig)
+                    startForegroundService(intent)
+                    isConnected = true
+                    findViewById<Button>(R.id.btnConnectMain)?.text = "قطع اتصال"
+                    findViewById<Button>(R.id.btnConnectMain)?.setBackgroundColor(Color.parseColor("#374151"))
+                } else {
+                    Toast.makeText(this, "کانفیگ نامعتبر", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this, "خطا در استارت: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun stopVpn() {
-        val intent = Intent(this, V2RayService::class.java)
-        intent.action = "STOP"
-        startService(intent)
-        isConnected = false
-        findViewById<Button>(R.id.btnConnectMain).text = "اتصال هوشمند"
-        findViewById<Button>(R.id.btnConnectMain).setBackgroundColor(Color.parseColor("#4F46E5"))
+        try {
+            val intent = Intent(this, V2RayService::class.java)
+            intent.action = "STOP"
+            startService(intent)
+            isConnected = false
+            findViewById<Button>(R.id.btnConnectMain)?.text = "اتصال هوشمند"
+            findViewById<Button>(R.id.btnConnectMain)?.setBackgroundColor(Color.parseColor("#4F46E5"))
+        } catch (e: Exception) { e.printStackTrace() }
     }
 }
