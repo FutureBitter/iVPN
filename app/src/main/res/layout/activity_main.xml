@@ -7,7 +7,6 @@
     android:background="#0F172A"
     android:padding="16dp">
 
-    <!-- هدر و خروج -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -29,7 +28,6 @@
             android:layout_alignParentEnd="true"/>
     </RelativeLayout>
 
-    <!-- کارت وضعیت حجم -->
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -90,19 +88,17 @@
     </androidx.cardview.widget.CardView>
 
     <TextView
-        android:text="انتخاب سرور (بهترین پینگ)"
+        android:text="سرورها"
         android:textColor="#94A3B8"
         android:textSize="12sp"
         android:layout_marginBottom="8dp"/>
 
-    <!-- لیست کانفیگ‌ها -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerConfigs"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"/>
 
-    <!-- دکمه اتصال شناور -->
     <Button
         android:id="@+id/btnConnectMain"
         android:layout_width="match_parent"
