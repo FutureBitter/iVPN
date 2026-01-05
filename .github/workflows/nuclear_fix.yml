@@ -1,0 +1,391 @@
+name: Nuclear Fix (Rebuild All Source)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  nuke_and_rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Wipe Old Files
+        run: |
+          # پاک کردن کدهای قدیمی برای جلوگیری از تداخل
+          rm -rf app/src/main/java/com/ivpn/app/*
+          rm -rf app/src/main/res/layout/*
+          rm -rf app/src/main/res/values/themes.xml
+          rm -rf app/src/main/res/values/colors.xml
+          # پاک کردن فایل‌های گرافیکی دردسرساز
+          rm -f app/src/main/res/drawable/custom_progress.xml
+
+      - name: Create Base Directories
+        run: |
+          mkdir -p app/src/main/java/com/ivpn/app/util
+          mkdir -p app/src/main/res/layout
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/drawable
+
+      - name: Write build.gradle.kts (Dependencies)
+        run: |
+          cat <<EOF > app/build.gradle.kts
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+          android {
+              namespace = "com.ivpn.app"
+              compileSdk = 34
+              defaultConfig {
+                  applicationId = "com.ivpn.app"
+                  minSdk = 24
+                  targetSdk = 34
+                  versionCode = 1
+                  versionName = "1.0.0"
+                  multiDexEnabled = true
+              }
+              buildTypes {
+                  release {
+                      isMinifyEnabled = false
+                      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_1_8
+                  targetCompatibility = JavaVersion.VERSION_1_8
+              }
+              kotlinOptions { jvmTarget = "1.8" }
+              buildFeatures { viewBinding = true }
+          }
+          dependencies {
+              implementation("androidx.core:core-ktx:1.12.0")
+              implementation("androidx.appcompat:appcompat:1.6.1")
+              implementation("com.google.android.material:material:1.11.0")
+              implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+              implementation("com.squareup.okhttp3:okhttp:4.12.0")
+              implementation("com.google.code.gson:gson:2.10.1")
+              implementation("androidx.recyclerview:recyclerview:1.3.2")
+              implementation("androidx.cardview:cardview:1.0.0")
+              implementation("androidx.multidex:multidex:2.0.1")
+              implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))
+          }
+          EOF
+
+      - name: Write Colors & Themes
+        run: |
+          # colors.xml
+          cat <<EOF > app/src/main/res/values/colors.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="colorPrimary">#4F46E5</color>
+              <color name="colorBackground">#0F172A</color>
+              <color name="colorSurface">#1E293B</color>
+              <color name="white">#FFFFFF</color>
+              <color name="textGray">#94A3B8</color>
+              <color name="green">#10B981</color>
+              <color name="red">#EF4444</color>
+              <color name="orange">#F59E0B</color>
+          </resources>
+          EOF
+
+          # themes.xml
+          cat <<EOF > app/src/main/res/values/themes.xml
+          <resources>
+              <style name="Theme.iVPN" parent="Theme.Material3.DayNight.NoActionBar">
+                  <item name="colorPrimary">@color/colorPrimary</item>
+                  <item name="android:colorBackground">@color/colorBackground</item>
+              </style>
+          </resources>
+          EOF
+          
+          # background drawable
+          cat <<EOF > app/src/main/res/drawable/bg_panel.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android"><solid android:color="#1E293B"/><corners android:radius="12dp"/></shape>
+          EOF
+
+      - name: Write Layouts (SAFE MODE - No Custom Drawables)
+        run: |
+          # activity_login.xml
+          cat <<EOF > app/src/main/res/layout/activity_login.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              android:gravity="center"
+              android:padding="30dp"
+              android:background="@color/colorBackground">
+              <TextView
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text="iVPN"
+                  android:textSize="32sp"
+                  android:textStyle="bold"
+                  android:textColor="@color/colorPrimary"
+                  android:layout_marginBottom="40dp"/>
+              <EditText
+                  android:id="@+id/etUsername"
+                  android:layout_width="match_parent"
+                  android:layout_height="50dp"
+                  android:hint="نام کاربری"
+                  android:textColor="@color/white"
+                  android:textColorHint="@color/textGray"
+                  android:background="@drawable/bg_panel"
+                  android:padding="10dp"
+                  android:layout_marginBottom="15dp"/>
+              <EditText
+                  android:id="@+id/etPassword"
+                  android:layout_width="match_parent"
+                  android:layout_height="50dp"
+                  android:hint="رمز عبور"
+                  android:inputType="textPassword"
+                  android:textColor="@color/white"
+                  android:textColorHint="@color/textGray"
+                  android:background="@drawable/bg_panel"
+                  android:padding="10dp"
+                  android:layout_marginBottom="25dp"/>
+              <Button
+                  android:id="@+id/btnLogin"
+                  android:layout_width="match_parent"
+                  android:layout_height="55dp"
+                  android:text="ورود"
+                  android:backgroundTint="@color/colorPrimary"
+                  android:textColor="@color/white"/>
+              <ProgressBar
+                  android:id="@+id/progressBar"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_marginTop="20dp"
+                  android:visibility="gone"/>
+          </LinearLayout>
+          EOF
+
+          # activity_main.xml (FIXED CRASH HERE)
+          cat <<EOF > app/src/main/res/layout/activity_main.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              android:background="@color/colorBackground"
+              android:padding="16dp">
+              <TextView
+                  android:id="@+id/tvTitle"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text="iVPN"
+                  android:textColor="@color/white"
+                  android:textSize="20sp"
+                  android:textStyle="bold"
+                  android:layout_marginBottom="20dp"
+                  android:layout_gravity="center_horizontal"/>
+              
+              <!-- Stats Panel -->
+              <LinearLayout
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:orientation="vertical"
+                  android:background="@drawable/bg_panel"
+                  android:padding="16dp"
+                  android:layout_marginBottom="20dp">
+                  <LinearLayout
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:orientation="horizontal">
+                      <TextView android:id="@+id/tvUsed" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="مصرف: --" android:textColor="@color/white"/>
+                      <TextView android:id="@+id/tvTotal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="کل: --" android:textColor="@color/white"/>
+                  </LinearLayout>
+                  <!-- رفع کرش: استفاده از پراگرس‌بار معمولی با رنگ -->
+                  <ProgressBar
+                      android:id="@+id/progressTraffic"
+                      style="?android:attr/progressBarStyleHorizontal"
+                      android:layout_width="match_parent"
+                      android:layout_height="10dp"
+                      android:layout_marginTop="10dp"
+                      android:progress="0"
+                      android:progressTint="@color/green"
+                      android:progressBackgroundTint="#334155"/>
+                  <TextView android:id="@+id/tvExpire" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="انقضا: --" android:textColor="@color/orange" android:gravity="end" android:layout_marginTop="5dp"/>
+              </LinearLayout>
+
+              <TextView android:text="لیست سرورها" android:textColor="@color/textGray" android:layout_marginBottom="10dp"/>
+              
+              <androidx.recyclerview.widget.RecyclerView
+                  android:id="@+id/recyclerConfigs"
+                  android:layout_width="match_parent"
+                  android:layout_height="0dp"
+                  android:layout_weight="1"/>
+
+              <Button
+                  android:id="@+id/btnConnectMain"
+                  android:layout_width="match_parent"
+                  android:layout_height="60dp"
+                  android:text="اتصال"
+                  android:textSize="18sp"
+                  android:textStyle="bold"
+                  android:backgroundTint="@color/colorPrimary"
+                  android:layout_marginTop="10dp"/>
+          </LinearLayout>
+          EOF
+
+          # item_config.xml
+          cat <<EOF > app/src/main/res/layout/item_config.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="horizontal"
+              android:padding="16dp"
+              android:layout_marginBottom="8dp"
+              android:background="@drawable/bg_panel"
+              android:gravity="center_vertical">
+              <ImageView android:id="@+id/imgSelect" android:layout_width="24dp" android:layout_height="24dp" android:src="@android:drawable/radiobutton_off_background"/>
+              <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="10dp">
+                  <TextView android:id="@+id/tvConfigName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Server" android:textColor="@color/white" android:textStyle="bold"/>
+                  <TextView android:id="@+id/tvConfigType" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="VLESS" android:textColor="@color/textGray" android:textSize="12sp"/>
+              </LinearLayout>
+              <TextView android:id="@+id/tvPing" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--" android:textColor="@color/orange" android:textStyle="bold"/>
+          </LinearLayout>
+          EOF
+
+      - name: Write Kotlin Logic (Complete)
+        run: |
+          # V2RayConfigUtil.kt
+          cat <<EOF > app/src/main/java/com/ivpn/app/util/V2RayConfigUtil.kt
+          package com.ivpn.app.util
+          import android.util.Base64
+          import org.json.JSONObject
+          import java.net.URI
+          import java.net.URLDecoder
+          import java.nio.charset.StandardCharsets
+          object V2RayConfigUtil {
+              data class ConfigItem(val name: String, val uri: String, var ping: Long = -1, var isSelected: Boolean = false)
+              fun parseSubscription(content: String): List<ConfigItem> {
+                  val list = mutableListOf<ConfigItem>()
+                  try {
+                      val decoded = try { String(Base64.decode(content, Base64.DEFAULT), StandardCharsets.UTF_8) } catch (e: Exception) { content }
+                      decoded.lines().forEach { line ->
+                          val trimmed = line.trim()
+                          if (trimmed.startsWith("vless://")) {
+                              try {
+                                  val name = URLDecoder.decode(trimmed.substringAfter("#"), "UTF-8")
+                                  list.add(ConfigItem(name, trimmed))
+                              } catch(e: Exception) { list.add(ConfigItem("Server", trimmed)) }
+                          }
+                      }
+                  } catch (e: Exception) {}
+                  return list
+              }
+              fun generateV2RayJson(uriString: String): String {
+                  try {
+                      val uri = URI(uriString)
+                      val json = JSONObject()
+                      val log = JSONObject().put("loglevel", "warning")
+                      json.put("log", log)
+                      val inbounds = org.json.JSONArray()
+                      val inbound = JSONObject().put("port", 10808).put("listen", "127.0.0.1").put("protocol", "socks").put("tag", "socks").put("settings", JSONObject().put("udp", true))
+                      inbounds.put(inbound)
+                      json.put("inbounds", inbounds)
+                      val outbounds = org.json.JSONArray()
+                      val outbound = JSONObject().put("tag", "proxy").put("protocol", "vless")
+                      val vnext = org.json.JSONArray()
+                      val server = JSONObject().put("address", uri.host).put("port", uri.port)
+                      val users = org.json.JSONArray()
+                      users.put(JSONObject().put("id", uri.userInfo).put("encryption", "none"))
+                      server.put("users", users)
+                      vnext.put(server)
+                      outbound.put("settings", JSONObject().put("vnext", vnext))
+                      val stream = JSONObject().put("network", "tcp")
+                      if ((uri.query?:"").contains("type=ws")) stream.put("network", "ws").put("wsSettings", JSONObject().put("path", "/"))
+                      if ((uri.query?:"").contains("security=tls")) stream.put("security", "tls")
+                      outbound.put("streamSettings", stream)
+                      outbounds.put(outbound)
+                      json.put("outbounds", outbounds)
+                      return json.toString()
+                  } catch (e: Exception) { return "" }
+              }
+          }
+          EOF
+
+          # ConfigAdapter.kt
+          cat <<EOF > app/src/main/java/com/ivpn/app/ConfigAdapter.kt
+          package com.ivpn.app
+          import android.graphics.Color
+          import android.view.LayoutInflater
+          import android.view.View
+          import android.view.ViewGroup
+          import android.widget.ImageView
+          import android.widget.TextView
+          import androidx.recyclerview.widget.RecyclerView
+          import com.ivpn.app.util.V2RayConfigUtil.ConfigItem
+          import com.ivpn.app.R
+          class ConfigAdapter(private var items: List<ConfigItem>, private val onSelect: (ConfigItem) -> Unit) : RecyclerView.Adapter<ConfigAdapter.VH>() {
+              class VH(v: View) : RecyclerView.ViewHolder(v) {
+                  val name: TextView = v.findViewById(R.id.tvConfigName)
+                  val ping: TextView = v.findViewById(R.id.tvPing)
+                  val icon: ImageView = v.findViewById(R.id.imgSelect)
+              }
+              override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = VH(LayoutInflater.from(parent.context).inflate(R.layout.item_config, parent, false))
+              override fun onBindViewHolder(holder: VH, position: Int) {
+                  val item = items[position]
+                  holder.name.text = item.name
+                  holder.ping.text = if(item.ping > 0) "\${item.ping}ms" else ""
+                  holder.icon.setImageResource(if(item.isSelected) android.R.drawable.radiobutton_on_background else android.R.drawable.radiobutton_off_background)
+                  holder.itemView.setOnClickListener { onSelect(item) }
+              }
+              override fun getItemCount() = items.size
+              fun updateList(newItems: List<ConfigItem>) { items = newItems; notifyDataSetChanged() }
+          }
+          EOF
+
+          # LoginActivity.kt
+          cat <<EOF > app/src/main/java/com/ivpn/app/LoginActivity.kt
+          package com.ivpn.app
+          import android.content.Intent
+          import android.os.Bundle
+          import android.view.View
+          import android.widget.*
+          import androidx.appcompat.app.AppCompatActivity
+          import com.google.gson.Gson
+          import okhttp3.*
+          import okhttp3.MediaType.Companion.toMediaTypeOrNull
+          import okhttp3.RequestBody.Companion.toRequestBody
+          import java.io.IOException
+          class LoginActivity : AppCompatActivity() {
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  setContentView(R.layout.activity_login)
+                  val prefs = getSharedPreferences("ivpn_data", MODE_PRIVATE)
+                  if (prefs.getBoolean("is_logged_in", false)) {
+                      startActivity(Intent(this, MainActivity::class.java))
+                      finish()
+                      return
+                  }
+                  val etUser = findViewById<EditText>(R.id.etUsername)
+                  val etPass = findViewById<EditText>(R.id.etPassword)
+                  val btnLogin = findViewById<Button>(R.id.btnLogin)
+                  val loading = findViewById<ProgressBar>(R.id.progressBar)
+                  btnLogin.setOnClickListener {
+                      val user = etUser.text.toString().trim()
+                      val pass = etPass.text.toString().trim()
+                      if (user.isEmpty() || pass.isEmpty()) return@setOnClickListener
+                      loading.visibility = View.VISIBLE
+                      btnLogin.isEnabled = false
+                      val client = OkHttpClient()
+                      val json = "{\"username\":\"\$user\", \"password\":\"\$pass\"}"
+                      val request = Request.Builder().url("https://fachur.ir/panel.php?api=login").post(json.toRequestBody("application/json".toMediaTypeOrNull())).build()
+                      client.newCall(request).enqueue(object : Callback {
+                          override fun onFailure(call: Call, e: IOException) {
+                              runOnUiThread { loading.visibility = View.GONE; btnLogin.isEnabled = true; Toast.makeText(applicationContext, "خطا در اتصال", Toast.LENGTH_SHORT).show() }
+                          }
+                          override fun onResponse(call: Call, response: Response) {
+                              val body = response.body?.string()
+                              runOnUiThread {
+                                  loading.visibility = View.GONE; btnLogin.isEnabled = true
+                                  try {
+                                      val g
