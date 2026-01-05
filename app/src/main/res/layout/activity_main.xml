@@ -1,111 +1,114 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="#0F172A"
     android:padding="16dp">
 
+    <!-- هدر -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp">
+        android:layout_marginBottom="20dp">
         <TextView
             android:id="@+id/tvTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="iVPN"
             android:textColor="#FFFFFF"
-            android:textSize="20sp"
+            android:textSize="22sp"
             android:textStyle="bold"/>
         <ImageView
             android:id="@+id/btnLogout"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
             android:src="@android:drawable/ic_lock_power_off"
-            app:tint="#EF4444"
             android:layout_alignParentEnd="true"/>
     </RelativeLayout>
 
-    <androidx.cardview.widget.CardView
+    <!-- پنل وضعیت (با پس‌زمینه ساده) -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardBackgroundColor="#1E293B"
-        app:cardCornerRadius="12dp"
-        android:layout_marginBottom="16dp">
+        android:orientation="vertical"
+        android:background="@drawable/bg_panel"
+        android:padding="20dp"
+        android:layout_marginBottom="20dp">
+        
+        <TextView
+            android:text="وضعیت بسته"
+            android:textColor="#94A3B8"
+            android:textSize="14sp"/>
+            
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="horizontal"
+            android:layout_marginTop="10dp"
+            android:weightSum="2">
             <TextView
-                android:text="وضعیت بسته"
-                android:textColor="#94A3B8"
-                android:textSize="12sp"/>
-            <LinearLayout
-                android:layout_width="match_parent"
+                android:id="@+id/tvUsed"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="8dp"
-                android:weightSum="2">
-                <TextView
-                    android:id="@+id/tvUsed"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="مصرف: ..."
-                    android:textColor="#FFFFFF"
-                    android:textSize="14sp"/>
-                <TextView
-                    android:id="@+id/tvTotal"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="end"
-                    android:text="کل: ..."
-                    android:textColor="#FFFFFF"
-                    android:textSize="14sp"/>
-            </LinearLayout>
-            <ProgressBar
-                android:id="@+id/progressTraffic"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="8dp"
-                android:layout_marginTop="8dp"
-                android:progressDrawable="@drawable/custom_progress"
-                android:progress="50"/>
+                android:layout_weight="1"
+                android:text="مصرف: --"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"/>
             <TextView
-                android:id="@+id/tvExpire"
-                android:layout_width="match_parent"
+                android:id="@+id/tvTotal"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="انقضا: ..."
-                android:textColor="#F59E0B"
-                android:textSize="12sp"
-                android:layout_marginTop="8dp"
-                android:gravity="end"/>
+                android:layout_weight="1"
+                android:gravity="end"
+                android:text="کل: --"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"/>
         </LinearLayout>
-    </androidx.cardview.widget.CardView>
+
+        <!-- نوار پیشرفت استاندارد -->
+        <ProgressBar
+            android:id="@+id/progressTraffic"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="10dp"
+            android:layout_marginTop="15dp"
+            android:progress="0"
+            android:max="100"/>
+            
+        <TextView
+            android:id="@+id/tvExpire"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="انقضا: --"
+            android:textColor="#F59E0B"
+            android:textSize="14sp"
+            android:layout_marginTop="10dp"
+            android:gravity="end"/>
+    </LinearLayout>
 
     <TextView
-        android:text="سرورها"
+        android:text="لیست سرورها"
         android:textColor="#94A3B8"
-        android:textSize="12sp"
-        android:layout_marginBottom="8dp"/>
+        android:textSize="14sp"
+        android:layout_marginBottom="10dp"/>
 
+    <!-- لیست سرور -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerConfigs"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"/>
+        android:layout_weight="1"
+        android:scrollbars="vertical"/>
 
+    <!-- دکمه اتصال -->
     <Button
         android:id="@+id/btnConnectMain"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
+        android:layout_height="65dp"
         android:text="اتصال هوشمند"
-        android:backgroundTint="#4F46E5"
-        android:layout_marginTop="10dp"
-        android:textSize="18sp"
-        android:textStyle="bold"/>
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginTop="15dp"
+        android:backgroundTint="#4F46E5"/>
 </LinearLayout>
