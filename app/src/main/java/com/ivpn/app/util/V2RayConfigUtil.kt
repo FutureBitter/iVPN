@@ -12,7 +12,6 @@ object V2RayConfigUtil {
     fun parseSubscription(content: String): List<ConfigItem> {
         val list = mutableListOf<ConfigItem>()
         try {
-            // Decode Base64 if needed
             val decoded = try {
                 String(Base64.decode(content, Base64.DEFAULT), StandardCharsets.UTF_8)
             } catch (e: Exception) { content }
@@ -32,10 +31,9 @@ object V2RayConfigUtil {
         return list
     }
 
-    // تبدیل VLESS به JSON برای هسته
     fun generateV2RayJson(uriString: String): String {
         try {
-            val uri = URI(uriString) // vless://uuid@ip:port?query#name
+            val uri = URI(uriString)
             val userInfo = uri.userInfo
             val host = uri.host
             val port = uri.port

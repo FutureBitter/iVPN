@@ -36,7 +36,7 @@ class ConfigAdapter(
             holder.ping.text = "${item.ping} ms"
             holder.ping.setTextColor(if (item.ping < 500) Color.GREEN else Color.YELLOW)
         } else {
-            holder.ping.text = "Testing..."
+            holder.ping.text = ""
             holder.ping.setTextColor(Color.GRAY)
         }
 

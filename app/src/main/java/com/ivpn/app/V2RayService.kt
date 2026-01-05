@@ -81,10 +81,9 @@ class V2RayService : VpnService() {
         super.onDestroy()
     }
     
-    // کالبک نهایی و کامل (شامل startup و shutdown)
     class V2RayCallback : CoreCallbackHandler {
         override fun onEmitStatus(l: Long, s: String?): Long { return 0 }
         override fun startup(): Long { return 0 }
-        override fun shutdown(): Long { return 0 } // متد اضافه شده برای رفع ارور
+        override fun shutdown(): Long { return 0 }
     }
 }
