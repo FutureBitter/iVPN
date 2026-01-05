@@ -1,4 +1,4 @@
-name: Fix VPN Service Code (Final)
+name: Fix VPN Service Code (Final Fix)
 
 on:
   workflow_dispatch:
@@ -63,7 +63,6 @@ jobs:
                   
                   startForeground(1, notification)
 
-                  // تنظیم تانل VPN
                   val builder = Builder()
                   builder.setSession("iVPN")
                   builder.setMtu(1500)
@@ -72,13 +71,11 @@ jobs:
                   
                   try {
                       mInterface = builder.establish()
-                      
                       try {
                           core.startLoop(config)
                       } catch (e: Exception) {
                           e.printStackTrace()
                       }
-                      
                   } catch (e: Exception) {
                       e.printStackTrace()
                       stopSelf()
@@ -102,10 +99,11 @@ jobs:
                   super.onDestroy()
               }
               
-              // کالبک اصلاح شده و هماهنگ با هسته جدید
+              // کالبک نهایی و کامل (شامل startup و shutdown)
               class V2RayCallback : CoreCallbackHandler {
                   override fun onEmitStatus(l: Long, s: String?): Long { return 0 }
-                  override fun startup(): Long { return 0 } // اضافه شده
+                  override fun startup(): Long { return 0 }
+                  override fun shutdown(): Long { return 0 } // متد اضافه شده برای رفع ارور
               }
           }
           EOF
@@ -115,5 +113,5 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add .
-          git commit -m "Fixed V2RayService code for XrayLite v25"
+          git commit -m "Fixed V2RayService code adding shutdown method"
           git push
