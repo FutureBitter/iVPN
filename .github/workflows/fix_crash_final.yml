@@ -1,4 +1,4 @@
-name: Ultimate Crash Fix (Safe Code)
+name: Fix XML Crash (Remove Custom Drawable)
 
 on:
   workflow_dispatch:
@@ -7,340 +7,203 @@ permissions:
   contents: write
 
 jobs:
-  fix_crash:
+  fix_xml:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Safe LoginActivity (ضد کرش)
+      - name: Rewrite Layouts (Safe Mode)
         run: |
-          cat <<EOF > app/src/main/java/com/ivpn/app/LoginActivity.kt
-          package com.ivpn.app
-          
-          import android.content.Intent
-          import android.os.Bundle
-          import android.view.View
-          import android.widget.Button
-          import android.widget.EditText
-          import android.widget.ProgressBar
-          import android.widget.Toast
-          import androidx.appcompat.app.AppCompatActivity
-          import com.google.gson.Gson
-          import okhttp3.*
-          import okhttp3.MediaType.Companion.toMediaTypeOrNull
-          import okhttp3.RequestBody.Companion.toRequestBody
-          import java.io.IOException
+          # 1. ساخت پوشه‌ها جهت اطمینان
+          mkdir -p app/src/main/res/drawable
+          mkdir -p app/src/main/res/layout
 
-          class LoginActivity : AppCompatActivity() {
-              override fun onCreate(savedInstanceState: Bundle?) {
-                  super.onCreate(savedInstanceState)
-                  setContentView(R.layout.activity_login)
-                  
-                  val prefs = getSharedPreferences("ivpn_data", MODE_PRIVATE)
-                  if (prefs.getBoolean("is_logged_in", false)) {
-                      goToMain()
-                      return
-                  }
-                  
-                  val etUser = findViewById<EditText>(R.id.etUsername)
-                  val etPass = findViewById<EditText>(R.id.etPassword)
-                  val btnLogin = findViewById<Button>(R.id.btnLogin)
-                  val loading = findViewById<ProgressBar>(R.id.progressBar)
-
-                  btnLogin.setOnClickListener {
-                      val user = etUser.text.toString().trim()
-                      val pass = etPass.text.toString().trim()
-                      
-                      if (user.isEmpty() || pass.isEmpty()) {
-                          Toast.makeText(this, "لطفا نام کاربری و رمز عبور را وارد کنید", Toast.LENGTH_SHORT).show()
-                          return@setOnClickListener
-                      }
-                      
-                      loading.visibility = View.VISIBLE
-                      btnLogin.isEnabled = false
-                      
-                      val client = OkHttpClient()
-                      val json = "{\"username\":\"\$user\", \"password\":\"\$pass\"}"
-                      val body = json.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
-                      val request = Request.Builder()
-                          .url("https://fachur.ir/panel.php?api=login")
-                          .post(body)
-                          .build()
-                          
-                      client.newCall(request).enqueue(object : Callback {
-                          override fun onFailure(call: Call, e: IOException) {
-                              runOnUiThread {
-                                  loading.visibility = View.GONE
-                                  btnLogin.isEnabled = true
-                                  Toast.makeText(applicationContext, "خطا در اتصال به اینترنت", Toast.LENGTH_LONG).show()
-                              }
-                          }
-                          
-                          override fun onResponse(call: Call, response: Response) {
-                              val respBody = response.body?.string()
-                              runOnUiThread {
-                                  loading.visibility = View.GONE
-                                  btnLogin.isEnabled = true
-                                  
-                                  try {
-                                      if (response.isSuccessful && respBody != null) {
-                                          val gson = Gson()
-                                          val apiResponse = gson.fromJson(respBody, ApiResponse::class.java)
-                                          
-                                          if (apiResponse != null && apiResponse.success) {
-                                              // چک کردن اینکه آیا دیتا نال است یا نه
-                                              val subUrl = apiResponse.data?.subscription_url ?: ""
-                                              
-                                              prefs.edit()
-                                                  .putBoolean("is_logged_in", true)
-                                                  .putString("sub_link", subUrl)
-                                                  .putString("username", user)
-                                                  .apply()
-                                                  
-                                              goToMain()
-                                          } else {
-                                              val msg = apiResponse?.message ?: "نام کاربری یا رمز عبور اشتباه است"
-                                              Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
-                                          }
-                                      } else {
-                                          Toast.makeText(applicationContext, "خطای سرور: \${response.code}", Toast.LENGTH_LONG).show()
-                                      }
-                                  } catch (e: Exception) {
-                                      e.printStackTrace()
-                                      Toast.makeText(applicationContext, "خطای پردازش: \${e.message}", Toast.LENGTH_LONG).show()
-                                  }
-                              }
-                          }
-                      })
-                  }
-              }
-              
-              private fun goToMain() {
-                  try {
-                      startActivity(Intent(this, MainActivity::class.java))
-                      finish()
-                  } catch (e: Exception) {
-                      Toast.makeText(this, "خطا در باز کردن صفحه اصلی", Toast.LENGTH_SHORT).show()
-                  }
-              }
-          }
-
-          // کلاس‌های مدل داده (با قابلیت Null Safety)
-          data class ApiResponse(
-              val success: Boolean = false, 
-              val data: UserData? = null, 
-              val message: String? = null
-          )
-          
-          data class UserData(
-              val subscription_url: String? = null,
-              val username: String? = null
-          )
+          # 2. ساخت پس‌زمینه ساده برای آیتم‌ها
+          cat <<EOF > app/src/main/res/drawable/bg_panel.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android">
+              <solid android:color="#1E293B"/>
+              <corners android:radius="12dp"/>
+          </shape>
           EOF
 
-      - name: Safe MainActivity (ضد کرش)
-        run: |
-          cat <<EOF > app/src/main/java/com/ivpn/app/MainActivity.kt
-          package com.ivpn.app
+          # 3. اصلاح صفحه اصلی (حذف عامل کرش)
+          # تغییر مهم: استفاده از progressTint به جای progressDrawable
+          cat <<EOF > app/src/main/res/layout/activity_main.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              android:background="#0F172A"
+              android:padding="16dp">
 
-          import android.content.Intent
-          import android.graphics.Color
-          import android.net.VpnService
-          import android.os.Bundle
-          import android.widget.Button
-          import android.widget.ImageView
-          import android.widget.ProgressBar
-          import android.widget.TextView
-          import android.widget.Toast
-          import androidx.appcompat.app.AppCompatActivity
-          import androidx.recyclerview.widget.LinearLayoutManager
-          import androidx.recyclerview.widget.RecyclerView
-          import com.ivpn.app.util.V2RayConfigUtil
-          import com.ivpn.app.util.V2RayConfigUtil.ConfigItem
-          import okhttp3.*
-          import java.io.IOException
-          import java.net.InetSocketAddress
-          import java.net.Socket
-          import java.net.URI
-          import kotlin.concurrent.thread
+              <!-- هدر -->
+              <RelativeLayout
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:layout_marginBottom="20dp">
+                  <TextView
+                      android:id="@+id/tvTitle"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:text="iVPN"
+                      android:textColor="#FFFFFF"
+                      android:textSize="22sp"
+                      android:textStyle="bold"/>
+                  <ImageView
+                      android:id="@+id/btnLogout"
+                      android:layout_width="28dp"
+                      android:layout_height="28dp"
+                      android:src="@android:drawable/ic_lock_power_off"
+                      android:tint="#EF4444"
+                      android:layout_alignParentEnd="true"/>
+              </RelativeLayout>
 
-          class MainActivity : AppCompatActivity() {
-              private var isConnected = false
-              private lateinit var adapter: ConfigAdapter
-              private var configList = mutableListOf<ConfigItem>()
-              private var selectedConfig: ConfigItem? = null
-              
-              override fun onCreate(savedInstanceState: Bundle?) {
-                  super.onCreate(savedInstanceState)
-                  try {
-                      setContentView(R.layout.activity_main)
+              <!-- پنل وضعیت -->
+              <LinearLayout
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:orientation="vertical"
+                  android:background="@drawable/bg_panel"
+                  android:padding="20dp"
+                  android:layout_marginBottom="20dp">
+                  
+                  <TextView
+                      android:text="وضعیت بسته"
+                      android:textColor="#94A3B8"
+                      android:textSize="14sp"/>
                       
-                      val prefs = getSharedPreferences("ivpn_data", MODE_PRIVATE)
-                      val username = prefs.getString("username", "") ?: ""
-                      val subLink = prefs.getString("sub_link", "") ?: ""
+                  <LinearLayout
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:orientation="horizontal"
+                      android:layout_marginTop="10dp"
+                      android:weightSum="2">
+                      <TextView
+                          android:id="@+id/tvUsed"
+                          android:layout_width="0dp"
+                          android:layout_height="wrap_content"
+                          android:layout_weight="1"
+                          android:text="مصرف: --"
+                          android:textColor="#FFFFFF"
+                          android:textSize="16sp"/>
+                      <TextView
+                          android:id="@+id/tvTotal"
+                          android:layout_width="0dp"
+                          android:layout_height="wrap_content"
+                          android:layout_weight="1"
+                          android:gravity="end"
+                          android:text="کل: --"
+                          android:textColor="#FFFFFF"
+                          android:textSize="16sp"/>
+                  </LinearLayout>
+
+                  <!-- این خط قبلا باعث کرش میشد. اصلاح شد: -->
+                  <ProgressBar
+                      android:id="@+id/progressTraffic"
+                      style="?android:attr/progressBarStyleHorizontal"
+                      android:layout_width="match_parent"
+                      android:layout_height="12dp"
+                      android:layout_marginTop="15dp"
+                      android:progress="0"
+                      android:max="100"
+                      android:progressTint="#10B981"
+                      android:progressBackgroundTint="#334155"/>
                       
-                      // تعریف متغیرها با ایمنی بالا (اگر ویجت پیدا نشد کرش نکند)
-                      val btnLogout = findViewById<ImageView>(R.id.btnLogout)
-                      val tvUsed = findViewById<TextView>(R.id.tvUsed)
-                      val tvTotal = findViewById<TextView>(R.id.tvTotal)
-                      val progress = findViewById<ProgressBar>(R.id.progressTraffic)
-                      val recycler = findViewById<RecyclerView>(R.id.recyclerConfigs)
-                      val btnConnect = findViewById<Button>(R.id.btnConnectMain)
+                  <TextView
+                      android:id="@+id/tvExpire"
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:text="انقضا: --"
+                      android:textColor="#F59E0B"
+                      android:textSize="14sp"
+                      android:layout_marginTop="10dp"
+                      android:gravity="end"/>
+              </LinearLayout>
 
-                      if (recycler != null) {
-                          recycler.layoutManager = LinearLayoutManager(this)
-                          adapter = ConfigAdapter(configList) { item ->
-                              selectConfig(item)
-                          }
-                          recycler.adapter = adapter
-                      }
+              <TextView
+                  android:text="لیست سرورها"
+                  android:textColor="#94A3B8"
+                  android:textSize="14sp"
+                  android:layout_marginBottom="10dp"/>
 
-                      btnLogout?.setOnClickListener {
-                          prefs.edit().clear().apply()
-                          startActivity(Intent(this, LoginActivity::class.java))
-                          finish()
-                      }
+              <androidx.recyclerview.widget.RecyclerView
+                  android:id="@+id/recyclerConfigs"
+                  android:layout_width="match_parent"
+                  android:layout_height="0dp"
+                  android:layout_weight="1"
+                  android:scrollbars="vertical"/>
 
-                      btnConnect?.setOnClickListener {
-                          if (!isConnected) {
-                              if (selectedConfig == null) {
-                                  Toast.makeText(this, "لطفا یک سرور انتخاب کنید (یا صبر کنید لیست لود شود)", Toast.LENGTH_SHORT).show()
-                                  return@setOnClickListener
-                              }
-                              val intent = VpnService.prepare(this)
-                              if (intent != null) {
-                                  startActivityForResult(intent, 1)
-                              } else {
-                                  startVpn()
-                              }
-                          } else {
-                              stopVpn()
-                          }
-                      }
-
-                      // دریافت اطلاعات
-                      fetchUserData(subLink)
-                      
-                  } catch (e: Exception) {
-                      e.printStackTrace()
-                      Toast.makeText(this, "خطای گرافیکی: \${e.message}", Toast.LENGTH_LONG).show()
-                      // اگر خطای شدید بود، به صفحه لاگین برگرد
-                      getSharedPreferences("ivpn_data", MODE_PRIVATE).edit().clear().apply()
-                      startActivity(Intent(this, LoginActivity::class.java))
-                      finish()
-                  }
-              }
-
-              override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-                  super.onActivityResult(requestCode, resultCode, data)
-                  if (requestCode == 1 && resultCode == RESULT_OK) {
-                      startVpn()
-                  }
-              }
-
-              private fun fetchUserData(fallbackLink: String) {
-                  if (fallbackLink.isNotEmpty()) {
-                      val client = OkHttpClient()
-                      val request = Request.Builder().url(fallbackLink).build()
-                      client.newCall(request).enqueue(object : Callback {
-                          override fun onFailure(call: Call, e: IOException) {
-                              runOnUiThread { Toast.makeText(applicationContext, "خطا در دریافت لیست", Toast.LENGTH_SHORT).show() }
-                          }
-                          override fun onResponse(call: Call, response: Response) {
-                              val body = response.body?.string()
-                              if (body != null) {
-                                  val parsed = V2RayConfigUtil.parseSubscription(body)
-                                  runOnUiThread {
-                                      configList.clear()
-                                      configList.addAll(parsed)
-                                      if (::adapter.isInitialized) {
-                                          adapter.updateList(configList)
-                                      }
-                                      
-                                      if (configList.isNotEmpty()) {
-                                          selectConfig(configList[0])
-                                          testPings()
-                                      } else {
-                                          Toast.makeText(applicationContext, "لیست سرور خالی است", Toast.LENGTH_SHORT).show()
-                                      }
-                                  }
-                              }
-                          }
-                      })
-                  } else {
-                      Toast.makeText(this, "لینک اشتراک یافت نشد", Toast.LENGTH_SHORT).show()
-                  }
-              }
-
-              private fun selectConfig(item: ConfigItem) {
-                  configList.forEach { it.isSelected = false }
-                  item.isSelected = true
-                  selectedConfig = item
-                  if (::adapter.isInitialized) adapter.updateList(configList)
-              }
-
-              private fun testPings() {
-                  thread {
-                      configList.forEachIndexed { index, item ->
-                          try {
-                              val uri = URI(item.uri)
-                              val start = System.currentTimeMillis()
-                              val socket = Socket()
-                              socket.connect(InetSocketAddress(uri.host, uri.port), 2000) 
-                              socket.close()
-                              item.ping = System.currentTimeMillis() - start
-                          } catch (e: Exception) {
-                              item.ping = -1 
-                          }
-                          runOnUiThread { 
-                              if (::adapter.isInitialized) adapter.notifyItemChanged(index) 
-                          }
-                      }
-                      configList.sortBy { if (it.ping > 0) it.ping else 9999 }
-                      runOnUiThread { 
-                          if (::adapter.isInitialized) adapter.updateList(configList) 
-                      }
-                  }
-              }
-
-              private fun startVpn() {
-                  selectedConfig?.let { config ->
-                      try {
-                          val jsonConfig = V2RayConfigUtil.generateV2RayJson(config.uri)
-                          if (jsonConfig.isNotEmpty()) {
-                              val intent = Intent(this, V2RayService::class.java)
-                              intent.putExtra("CONFIG_CONTENT", jsonConfig)
-                              startForegroundService(intent)
-                              isConnected = true
-                              findViewById<Button>(R.id.btnConnectMain)?.text = "قطع اتصال"
-                              findViewById<Button>(R.id.btnConnectMain)?.setBackgroundColor(Color.parseColor("#374151"))
-                          } else {
-                              Toast.makeText(this, "کانفیگ نامعتبر", Toast.LENGTH_SHORT).show()
-                          }
-                      } catch (e: Exception) {
-                          Toast.makeText(this, "خطا در استارت: \${e.message}", Toast.LENGTH_SHORT).show()
-                      }
-                  }
-              }
-
-              private fun stopVpn() {
-                  try {
-                      val intent = Intent(this, V2RayService::class.java)
-                      intent.action = "STOP"
-                      startService(intent)
-                      isConnected = false
-                      findViewById<Button>(R.id.btnConnectMain)?.text = "اتصال هوشمند"
-                      findViewById<Button>(R.id.btnConnectMain)?.setBackgroundColor(Color.parseColor("#4F46E5"))
-                  } catch (e: Exception) { e.printStackTrace() }
-              }
-          }
+              <Button
+                  android:id="@+id/btnConnectMain"
+                  android:layout_width="match_parent"
+                  android:layout_height="65dp"
+                  android:text="اتصال هوشمند"
+                  android:textSize="20sp"
+                  android:textStyle="bold"
+                  android:layout_marginTop="15dp"
+                  android:backgroundTint="#4F46E5"
+                  android:textColor="#FFFFFF"/>
+          </LinearLayout>
           EOF
 
-      - name: Commit Fixes
+          # 4. اطمینان از وجود فایل آیتم لیست
+          cat <<EOF > app/src/main/res/layout/item_config.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="horizontal"
+              android:padding="16dp"
+              android:layout_marginBottom="8dp"
+              android:background="@drawable/bg_panel"
+              android:gravity="center_vertical">
+              
+              <ImageView
+                  android:id="@+id/imgSelect"
+                  android:layout_width="24dp"
+                  android:layout_height="24dp"
+                  android:src="@android:drawable/radiobutton_off_background"/>
+                  
+              <LinearLayout
+                  android:layout_width="0dp"
+                  android:layout_height="wrap_content"
+                  android:layout_weight="1"
+                  android:orientation="vertical"
+                  android:layout_marginStart="16dp">
+                  <TextView
+                      android:id="@+id/tvConfigName"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:text="Server"
+                      android:textColor="#FFFFFF"
+                      android:textSize="16sp"
+                      android:textStyle="bold"/>
+                  <TextView
+                      android:id="@+id/tvConfigType"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:text="VLESS"
+                      android:textColor="#64748B"
+                      android:textSize="12sp"/>
+              </LinearLayout>
+              
+              <TextView
+                  android:id="@+id/tvPing"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text="- ms"
+                  android:textColor="#F59E0B"
+                  android:textStyle="bold"/>
+          </LinearLayout>
+          EOF
+
+      - name: Commit XML Fixes
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add .
-          git commit -m "Ultimate Crash Fix: Safe Login & Main Logic"
+          git commit -m "Replaced custom drawable with progressTint to fix crash"
           git push
