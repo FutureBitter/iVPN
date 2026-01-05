@@ -1,0 +1,203 @@
+name: Fix UI Crash (Safe Mode)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix_ui:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Safe Layouts (No CardView)
+        run: |
+          # 1. ساخت فایل پس‌زمینه ساده (به جای CardView)
+          mkdir -p app/src/main/res/drawable
+          cat <<EOF > app/src/main/res/drawable/bg_panel.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android">
+              <solid android:color="#1E293B"/>
+              <corners android:radius="12dp"/>
+          </shape>
+          EOF
+
+          # 2. اصلاح صفحه اصلی (حذف CardView و استفاده از المان‌های استاندارد)
+          cat <<EOF > app/src/main/res/layout/activity_main.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              android:background="#0F172A"
+              android:padding="16dp">
+
+              <!-- هدر -->
+              <RelativeLayout
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:layout_marginBottom="20dp">
+                  <TextView
+                      android:id="@+id/tvTitle"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:text="iVPN"
+                      android:textColor="#FFFFFF"
+                      android:textSize="22sp"
+                      android:textStyle="bold"/>
+                  <ImageView
+                      android:id="@+id/btnLogout"
+                      android:layout_width="28dp"
+                      android:layout_height="28dp"
+                      android:src="@android:drawable/ic_lock_power_off"
+                      android:layout_alignParentEnd="true"/>
+              </RelativeLayout>
+
+              <!-- پنل وضعیت (با پس‌زمینه ساده) -->
+              <LinearLayout
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:orientation="vertical"
+                  android:background="@drawable/bg_panel"
+                  android:padding="20dp"
+                  android:layout_marginBottom="20dp">
+                  
+                  <TextView
+                      android:text="وضعیت بسته"
+                      android:textColor="#94A3B8"
+                      android:textSize="14sp"/>
+                      
+                  <LinearLayout
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:orientation="horizontal"
+                      android:layout_marginTop="10dp"
+                      android:weightSum="2">
+                      <TextView
+                          android:id="@+id/tvUsed"
+                          android:layout_width="0dp"
+                          android:layout_height="wrap_content"
+                          android:layout_weight="1"
+                          android:text="مصرف: --"
+                          android:textColor="#FFFFFF"
+                          android:textSize="16sp"/>
+                      <TextView
+                          android:id="@+id/tvTotal"
+                          android:layout_width="0dp"
+                          android:layout_height="wrap_content"
+                          android:layout_weight="1"
+                          android:gravity="end"
+                          android:text="کل: --"
+                          android:textColor="#FFFFFF"
+                          android:textSize="16sp"/>
+                  </LinearLayout>
+
+                  <!-- نوار پیشرفت استاندارد -->
+                  <ProgressBar
+                      android:id="@+id/progressTraffic"
+                      style="?android:attr/progressBarStyleHorizontal"
+                      android:layout_width="match_parent"
+                      android:layout_height="10dp"
+                      android:layout_marginTop="15dp"
+                      android:progress="0"
+                      android:max="100"/>
+                      
+                  <TextView
+                      android:id="@+id/tvExpire"
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:text="انقضا: --"
+                      android:textColor="#F59E0B"
+                      android:textSize="14sp"
+                      android:layout_marginTop="10dp"
+                      android:gravity="end"/>
+              </LinearLayout>
+
+              <TextView
+                  android:text="لیست سرورها"
+                  android:textColor="#94A3B8"
+                  android:textSize="14sp"
+                  android:layout_marginBottom="10dp"/>
+
+              <!-- لیست سرور -->
+              <androidx.recyclerview.widget.RecyclerView
+                  android:id="@+id/recyclerConfigs"
+                  android:layout_width="match_parent"
+                  android:layout_height="0dp"
+                  android:layout_weight="1"
+                  android:scrollbars="vertical"/>
+
+              <!-- دکمه اتصال -->
+              <Button
+                  android:id="@+id/btnConnectMain"
+                  android:layout_width="match_parent"
+                  android:layout_height="65dp"
+                  android:text="اتصال هوشمند"
+                  android:textSize="20sp"
+                  android:textStyle="bold"
+                  android:layout_marginTop="15dp"
+                  android:backgroundTint="#4F46E5"/>
+          </LinearLayout>
+          EOF
+
+          # 3. اصلاح آیتم لیست (حذف CardView)
+          cat <<EOF > app/src/main/res/layout/item_config.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="horizontal"
+              android:padding="16dp"
+              android:layout_marginBottom="8dp"
+              android:background="@drawable/bg_panel"
+              android:gravity="center_vertical">
+              
+              <ImageView
+                  android:id="@+id/imgSelect"
+                  android:layout_width="24dp"
+                  android:layout_height="24dp"
+                  android:src="@android:drawable/radiobutton_off_background"/>
+                  
+              <LinearLayout
+                  android:layout_width="0dp"
+                  android:layout_height="wrap_content"
+                  android:layout_weight="1"
+                  android:orientation="vertical"
+                  android:layout_marginStart="16dp">
+                  <TextView
+                      android:id="@+id/tvConfigName"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:text="Server"
+                      android:textColor="#FFFFFF"
+                      android:textSize="16sp"
+                      android:textStyle="bold"/>
+                  <TextView
+                      android:id="@+id/tvConfigType"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:text="VLESS"
+                      android:textColor="#64748B"
+                      android:textSize="12sp"/>
+              </LinearLayout>
+              
+              <TextView
+                  android:id="@+id/tvPing"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text="- ms"
+                  android:textColor="#F59E0B"
+                  android:textStyle="bold"/>
+          </LinearLayout>
+          EOF
+
+      - name: Commit UI Fixes
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add .
+          git commit -m "Replaced CardView with LinearLayout to fix crash"
+          git push
