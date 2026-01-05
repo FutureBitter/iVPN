@@ -1,0 +1,462 @@
+name: Fix App Logic (Sync with UI)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix_logic:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Re-write All Kotlin Logic
+        run: |
+          # ساخت پوشه util اگر نیست
+          mkdir -p app/src/main/java/com/ivpn/app/util
+
+          # 1. ابزار تبدیل لینک (V2RayConfigUtil.kt)
+          cat <<EOF > app/src/main/java/com/ivpn/app/util/V2RayConfigUtil.kt
+          package com.ivpn.app.util
+          
+          import android.util.Base64
+          import org.json.JSONObject
+          import java.net.URI
+          import java.net.URLDecoder
+          import java.nio.charset.StandardCharsets
+          
+          object V2RayConfigUtil {
+              data class ConfigItem(val name: String, val uri: String, var ping: Long = -1, var isSelected: Boolean = false)
+
+              fun parseSubscription(content: String): List<ConfigItem> {
+                  val list = mutableListOf<ConfigItem>()
+                  try {
+                      val decoded = try {
+                          String(Base64.decode(content, Base64.DEFAULT), StandardCharsets.UTF_8)
+                      } catch (e: Exception) { content }
+                      
+                      decoded.lines().forEach { line ->
+                          val trimmed = line.trim()
+                          if (trimmed.startsWith("vless://")) {
+                              try {
+                                  val name = URLDecoder.decode(trimmed.substringAfter("#"), "UTF-8")
+                                  list.add(ConfigItem(name, trimmed))
+                              } catch(e: Exception) {
+                                  list.add(ConfigItem("Server", trimmed))
+                              }
+                          }
+                      }
+                  } catch (e: Exception) { e.printStackTrace() }
+                  return list
+              }
+
+              fun generateV2RayJson(uriString: String): String {
+                  try {
+                      val uri = URI(uriString)
+                      val userInfo = uri.userInfo
+                      val host = uri.host
+                      val port = uri.port
+                      val query = uri.query ?: ""
+                      
+                      val json = JSONObject()
+                      val log = JSONObject().put("loglevel", "warning")
+                      json.put("log", log)
+                      
+                      val inbounds = org.json.JSONArray()
+                      val inbound = JSONObject()
+                      inbound.put("port", 10808)
+                      inbound.put("listen", "127.0.0.1")
+                      inbound.put("protocol", "socks")
+                      inbound.put("tag", "socks")
+                      inbound.put("settings", JSONObject().put("udp", true))
+                      inbounds.put(inbound)
+                      json.put("inbounds", inbounds)
+                      
+                      val outbounds = org.json.JSONArray()
+                      val outbound = JSONObject()
+                      outbound.put("tag", "proxy")
+                      outbound.put("protocol", "vless")
+                      
+                      val vnext = org.json.JSONArray()
+                      val server = JSONObject()
+                      server.put("address", host)
+                      server.put("port", port)
+                      val users = org.json.JSONArray()
+                      val user = JSONObject()
+                      user.put("id", userInfo)
+                      user.put("encryption", "none")
+                      users.put(user)
+                      server.put("users", users)
+                      vnext.put(server)
+                      
+                      val settings = JSONObject()
+                      settings.put("vnext", vnext)
+                      outbound.put("settings", settings)
+                      
+                      val stream = JSONObject()
+                      stream.put("network", "tcp")
+                      if (query.contains("type=ws")) {
+                          stream.put("network", "ws")
+                          stream.put("wsSettings", JSONObject().put("path", "/").put("headers", JSONObject()))
+                      }
+                      if (query.contains("security=tls")) {
+                          stream.put("security", "tls")
+                      }
+                      outbound.put("streamSettings", stream)
+                      
+                      outbounds.put(outbound)
+                      json.put("outbounds", outbounds)
+                      
+                      return json.toString()
+                  } catch (e: Exception) {
+                      return ""
+                  }
+              }
+          }
+          EOF
+
+          # 2. آداپتور لیست (ConfigAdapter.kt)
+          cat <<EOF > app/src/main/java/com/ivpn/app/ConfigAdapter.kt
+          package com.ivpn.app
+          
+          import android.graphics.Color
+          import android.view.LayoutInflater
+          import android.view.View
+          import android.view.ViewGroup
+          import android.widget.ImageView
+          import android.widget.TextView
+          import androidx.recyclerview.widget.RecyclerView
+          import com.ivpn.app.util.V2RayConfigUtil.ConfigItem
+          import com.ivpn.app.R
+
+          class ConfigAdapter(
+              private var items: List<ConfigItem>,
+              private val onSelect: (ConfigItem) -> Unit
+          ) : RecyclerView.Adapter<ConfigAdapter.VH>() {
+
+              class VH(v: View) : RecyclerView.ViewHolder(v) {
+                  val name: TextView = v.findViewById(R.id.tvConfigName)
+                  val type: TextView = v.findViewById(R.id.tvConfigType)
+                  val ping: TextView = v.findViewById(R.id.tvPing)
+                  val icon: ImageView = v.findViewById(R.id.imgSelect)
+                  val card: View = v
+              }
+
+              override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+                  val v = LayoutInflater.from(parent.context).inflate(R.layout.item_config, parent, false)
+                  return VH(v)
+              }
+
+              override fun onBindViewHolder(holder: VH, position: Int) {
+                  val item = items[position]
+                  holder.name.text = item.name.ifEmpty { "Server \${position + 1}" }
+                  
+                  if (item.ping > 0) {
+                      holder.ping.text = "\${item.ping} ms"
+                      holder.ping.setTextColor(if (item.ping < 500) Color.GREEN else Color.YELLOW)
+                  } else {
+                      holder.ping.text = ""
+                      holder.ping.setTextColor(Color.GRAY)
+                  }
+
+                  if (item.isSelected) {
+                      holder.icon.setImageResource(android.R.drawable.radiobutton_on_background)
+                      holder.icon.setColorFilter(Color.parseColor("#4F46E5"))
+                  } else {
+                      holder.icon.setImageResource(android.R.drawable.radiobutton_off_background)
+                      holder.icon.setColorFilter(Color.GRAY)
+                  }
+
+                  holder.card.setOnClickListener { onSelect(item) }
+              }
+
+              override fun getItemCount() = items.size
+              
+              fun updateList(newItems: List<ConfigItem>) {
+                  items = newItems
+                  notifyDataSetChanged()
+              }
+          }
+          EOF
+
+          # 3. صفحه اصلی (MainActivity.kt) - هماهنگ شده با XML جدید
+          cat <<EOF > app/src/main/java/com/ivpn/app/MainActivity.kt
+          package com.ivpn.app
+
+          import android.content.Intent
+          import android.graphics.Color
+          import android.net.VpnService
+          import android.os.Bundle
+          import android.widget.Button
+          import android.widget.ImageView
+          import android.widget.ProgressBar
+          import android.widget.TextView
+          import android.widget.Toast
+          import androidx.appcompat.app.AppCompatActivity
+          import androidx.recyclerview.widget.LinearLayoutManager
+          import androidx.recyclerview.widget.RecyclerView
+          import com.ivpn.app.util.V2RayConfigUtil
+          import com.ivpn.app.util.V2RayConfigUtil.ConfigItem
+          import okhttp3.*
+          import java.io.IOException
+          import java.net.InetSocketAddress
+          import java.net.Socket
+          import java.net.URI
+          import kotlin.concurrent.thread
+          import com.google.gson.Gson
+          import org.json.JSONObject
+
+          class MainActivity : AppCompatActivity() {
+              private var isConnected = false
+              private lateinit var adapter: ConfigAdapter
+              private var configList = mutableListOf<ConfigItem>()
+              private var selectedConfig: ConfigItem? = null
+              
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  setContentView(R.layout.activity_main)
+                  
+                  val prefs = getSharedPreferences("ivpn_data", MODE_PRIVATE)
+                  val username = prefs.getString("username", "") ?: ""
+                  val subLink = prefs.getString("sub_link", "") ?: ""
+                  
+                  // المان‌های UI با ID های صحیح
+                  val btnLogout = findViewById<ImageView>(R.id.btnLogout)
+                  val tvUsed = findViewById<TextView>(R.id.tvUsed)
+                  val tvTotal = findViewById<TextView>(R.id.tvTotal)
+                  val tvExpire = findViewById<TextView>(R.id.tvExpire)
+                  val progress = findViewById<ProgressBar>(R.id.progressTraffic)
+                  val recycler = findViewById<RecyclerView>(R.id.recyclerConfigs)
+                  val btnConnect = findViewById<Button>(R.id.btnConnectMain) // دکمه جدید
+
+                  recycler.layoutManager = LinearLayoutManager(this)
+                  adapter = ConfigAdapter(configList) { item ->
+                      selectConfig(item)
+                  }
+                  recycler.adapter = adapter
+
+                  btnLogout.setOnClickListener {
+                      prefs.edit().clear().apply()
+                      startActivity(Intent(this, LoginActivity::class.java))
+                      finish()
+                  }
+
+                  btnConnect.setOnClickListener {
+                      if (!isConnected) {
+                          if (selectedConfig == null) {
+                              Toast.makeText(this, "لطفا یک سرور انتخاب کنید", Toast.LENGTH_SHORT).show()
+                              return@setOnClickListener
+                          }
+                          val intent = VpnService.prepare(this)
+                          if (intent != null) {
+                              startActivityForResult(intent, 1)
+                          } else {
+                              startVpn()
+                          }
+                      } else {
+                          stopVpn()
+                      }
+                  }
+
+                  // پر کردن اطلاعات حجم (فعلا نمایشی تا به API وصل شود)
+                  tvUsed.text = "مصرف: ۰ گیگابایت"
+                  tvTotal.text = "کل: نامحدود"
+                  progress.progress = 0
+
+                  // دریافت لیست سرورها
+                  fetchUserData(subLink)
+              }
+
+              override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+                  super.onActivityResult(requestCode, resultCode, data)
+                  if (requestCode == 1 && resultCode == RESULT_OK) {
+                      startVpn()
+                  }
+              }
+
+              private fun fetchUserData(fallbackLink: String) {
+                  if (fallbackLink.isNotEmpty()) {
+                      val client = OkHttpClient()
+                      val request = Request.Builder().url(fallbackLink).build()
+                      client.newCall(request).enqueue(object : Callback {
+                          override fun onFailure(call: Call, e: IOException) {
+                              runOnUiThread { Toast.makeText(applicationContext, "خطا در دریافت لیست سرورها", Toast.LENGTH_SHORT).show() }
+                          }
+                          override fun onResponse(call: Call, response: Response) {
+                              val body = response.body?.string()
+                              if (body != null) {
+                                  val parsed = V2RayConfigUtil.parseSubscription(body)
+                                  runOnUiThread {
+                                      configList.clear()
+                                      configList.addAll(parsed)
+                                      adapter.updateList(configList)
+                                      if (configList.isNotEmpty()) {
+                                          selectConfig(configList[0])
+                                          testPings()
+                                      } else {
+                                          Toast.makeText(applicationContext, "سروری یافت نشد", Toast.LENGTH_SHORT).show()
+                                      }
+                                  }
+                              }
+                          }
+                      })
+                  }
+              }
+
+              private fun selectConfig(item: ConfigItem) {
+                  configList.forEach { it.isSelected = false }
+                  item.isSelected = true
+                  selectedConfig = item
+                  adapter.updateList(configList)
+              }
+
+              private fun testPings() {
+                  thread {
+                      configList.forEachIndexed { index, item ->
+                          try {
+                              val uri = URI(item.uri)
+                              val start = System.currentTimeMillis()
+                              val socket = Socket()
+                              socket.connect(InetSocketAddress(uri.host, uri.port), 2000) 
+                              socket.close()
+                              item.ping = System.currentTimeMillis() - start
+                          } catch (e: Exception) {
+                              item.ping = -1 
+                          }
+                          runOnUiThread { adapter.notifyItemChanged(index) }
+                      }
+                      configList.sortBy { if (it.ping > 0) it.ping else 9999 }
+                      runOnUiThread { adapter.updateList(configList) }
+                  }
+              }
+
+              private fun startVpn() {
+                  selectedConfig?.let { config ->
+                      val jsonConfig = V2RayConfigUtil.generateV2RayJson(config.uri)
+                      if (jsonConfig.isNotEmpty()) {
+                          val intent = Intent(this, V2RayService::class.java)
+                          intent.putExtra("CONFIG_CONTENT", jsonConfig)
+                          startForegroundService(intent)
+                          isConnected = true
+                          findViewById<Button>(R.id.btnConnectMain).text = "قطع اتصال"
+                          findViewById<Button>(R.id.btnConnectMain).setBackgroundColor(Color.parseColor("#374151"))
+                      } else {
+                          Toast.makeText(this, "کانفیگ نامعتبر است", Toast.LENGTH_SHORT).show()
+                      }
+                  }
+              }
+
+              private fun stopVpn() {
+                  val intent = Intent(this, V2RayService::class.java)
+                  intent.action = "STOP"
+                  startService(intent)
+                  isConnected = false
+                  findViewById<Button>(R.id.btnConnectMain).text = "اتصال هوشمند"
+                  findViewById<Button>(R.id.btnConnectMain).setBackgroundColor(Color.parseColor("#4F46E5"))
+              }
+          }
+          EOF
+
+          # 4. سرویس VPN (V2RayService.kt) - اصلاح شده و بدون باگ
+          cat <<EOF > app/src/main/java/com/ivpn/app/V2RayService.kt
+          package com.ivpn.app
+
+          import android.app.Notification
+          import android.app.NotificationChannel
+          import android.app.NotificationManager
+          import android.content.Intent
+          import android.net.VpnService
+          import android.os.Build
+          import android.os.ParcelFileDescriptor
+          import androidx.core.app.NotificationCompat
+          import libv2ray.Libv2ray
+          import libv2ray.CoreCallbackHandler
+
+          class V2RayService : VpnService() {
+              private var mInterface: ParcelFileDescriptor? = null
+              private val core = Libv2ray.newCoreController(V2RayCallback())
+
+              override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+                  val action = intent?.action
+                  if (action == "STOP") {
+                      stopVPN()
+                      return START_NOT_STICKY
+                  }
+                  
+                  val configContent = intent?.getStringExtra("CONFIG_CONTENT") ?: ""
+                  if (configContent.isNotEmpty()) {
+                      startVPN(configContent)
+                  }
+                  return START_STICKY
+              }
+
+              private fun startVPN(config: String) {
+                  val channelId = "ivpn_connection"
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                      val channel = NotificationChannel(channelId, "VPN Status", NotificationManager.IMPORTANCE_LOW)
+                      getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+                  }
+                  
+                  val notification: Notification = NotificationCompat.Builder(this, channelId)
+                      .setContentTitle("iVPN")
+                      .setContentText("متصل به اینترنت آزاد")
+                      .setSmallIcon(R.mipmap.ic_launcher)
+                      .setOngoing(true)
+                      .build()
+                  
+                  startForeground(1, notification)
+
+                  val builder = Builder()
+                  builder.setSession("iVPN")
+                  builder.setMtu(1500)
+                  builder.addAddress("10.10.10.10", 24)
+                  builder.addRoute("0.0.0.0", 0)
+                  
+                  try {
+                      mInterface = builder.establish()
+                      try {
+                          core.startLoop(config)
+                      } catch (e: Exception) {
+                          e.printStackTrace()
+                      }
+                  } catch (e: Exception) {
+                      e.printStackTrace()
+                      stopSelf()
+                  }
+              }
+
+              private fun stopVPN() {
+                  try {
+                      core.stopLoop()
+                      mInterface?.close()
+                      mInterface = null
+                      stopForeground(true)
+                  } catch (e: Exception) {
+                      e.printStackTrace()
+                  }
+                  stopSelf()
+              }
+              
+              override fun onDestroy() {
+                  stopVPN()
+                  super.onDestroy()
+              }
+              
+              class V2RayCallback : CoreCallbackHandler {
+                  override fun onEmitStatus(l: Long, s: String?): Long { return 0 }
+                  override fun startup(): Long { return 0 }
+                  override fun shutdown(): Long { return 0 }
+              }
+          }
+          EOF
+
+      - name: Commit Changes
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add .
+          git commit -m "Fixed App Logic: Synced Kotlin with New UI"
+          git push
