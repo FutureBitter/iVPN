@@ -1,4 +1,5 @@
 package com.ivpn.app
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -7,12 +8,13 @@ import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
-import libv2ray.V2RayPoint
 import libv2ray.Libv2ray
+import libv2ray.CoreCallbackHandler
 
 class V2RayService : VpnService() {
     private var mInterface: ParcelFileDescriptor? = null
-    private val v2rayPoint = Libv2ray.newV2RayPoint(V2RayCallback(), Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1)
+    // استفاده از کنترلر جدید (CoreController) که با هسته XrayLite هماهنگ است
+    private val core = Libv2ray.newCoreController(V2RayCallback())
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action
@@ -29,37 +31,38 @@ class V2RayService : VpnService() {
     }
 
     private fun startVPN(config: String) {
-        // 1. نمایش نوتیفیکیشن
-        val channelId = "ivpn_service"
+        val channelId = "ivpn_connection"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "VPN Service", NotificationManager.IMPORTANCE_LOW)
+            val channel = NotificationChannel(channelId, "VPN Status", NotificationManager.IMPORTANCE_LOW)
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
+        
         val notification: Notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("FUTURIX")
-            .setContentText("متصل به اینترنت امن")
+            .setContentTitle("iVPN")
+            .setContentText("متصل به اینترنت آزاد")
             .setSmallIcon(R.mipmap.ic_launcher)
+            .setOngoing(true)
             .build()
+        
         startForeground(1, notification)
 
-        // 2. تنظیم تانل VPN
+        // تنظیم تانل VPN
         val builder = Builder()
-        builder.setSession("FUTURIX")
+        builder.setSession("iVPN")
         builder.setMtu(1500)
         builder.addAddress("10.10.10.10", 24)
         builder.addRoute("0.0.0.0", 0)
         
         try {
             mInterface = builder.establish()
-            val fd = mInterface?.fd ?: 0
             
-            // 3. استارت هسته V2Ray
-            // نکته: ما فعلا کانفیگ را مستقیم پاس می‌دهیم. 
-            // در نسخه کامل باید جیسون تولید شود. اینجا فقط استارت می زنیم.
-            if (!v2rayPoint.isRunning) {
-                v2rayPoint.configureFile(config)
-                v2rayPoint.runLoop(false)
+            // استارت هسته با متد جدید startLoop
+            try {
+                core.startLoop(config)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
+            
         } catch (e: Exception) {
             e.printStackTrace()
             stopSelf()
@@ -68,9 +71,7 @@ class V2RayService : VpnService() {
 
     private fun stopVPN() {
         try {
-            if (v2rayPoint.isRunning) {
-                v2rayPoint.stopLoop()
-            }
+            core.stopLoop()
             mInterface?.close()
             mInterface = null
             stopForeground(true)
@@ -85,9 +86,9 @@ class V2RayService : VpnService() {
         super.onDestroy()
     }
     
-    // کلاس کالبک برای دریافت وضعیت از هسته
-    class V2RayCallback : libv2ray.V2RayVPNServiceSupportsSet {
-        override fun onEmitStatus(j: Long, s: String?): Long { return 0 }
+    // کالبک جدید برای XrayLite
+    class V2RayCallback : CoreCallbackHandler {
+        override fun onEmitStatus(l: Long, s: String?) {}
         override fun prepare(): Long { return 0 }
         override fun protect(l: Long): Long { return 0 }
         override fun setup(s: String?): Long { return 0 }
